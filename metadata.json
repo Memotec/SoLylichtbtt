@@ -1,0 +1,8 @@
+{
+  "name": "Sổ Quản Lý Lý Lịch Thiết Bị",
+  "description": "Ứng dụng quản lý Sổ lý lịch thiết bị kỹ thuật chuyên dụng cho ngành Quản lý bay (VATM), bao gồm đặc tính kỹ thuật, danh mục linh kiện, nhật ký bảo dưỡng định kỳ, lịch sử sửa chữa sự cố và in ấn sổ lý lịch theo tiêu chuẩn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
