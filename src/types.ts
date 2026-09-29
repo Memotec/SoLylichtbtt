@@ -135,6 +135,7 @@ export const EQUIPMENT_CATEGORIES = [
   'HF',
   'VIBA',
   'VSAT',
+  'Ghép kênh',
   'ADS-B',
   'Nokia',
   'Firewall',
