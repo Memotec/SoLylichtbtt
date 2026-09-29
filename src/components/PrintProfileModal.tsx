@@ -863,7 +863,7 @@ export function PrintProfileModal({
                   </div>
                   <div className="flex justify-end pt-1">
                     <span className="text-sm font-bold italic font-mono text-black">
-                      {formData.general.bookletNo ? formData.general.bookletNo : 'B9 VHF'}
+                      {formData.general.bookletNo ? formData.general.bookletNo : ''}
                     </span>
                   </div>
                 </div>
