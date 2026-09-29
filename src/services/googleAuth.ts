@@ -20,7 +20,8 @@ export const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/spreadsheets.readonly',
   'https://www.googleapis.com/auth/documents',
-  'https://www.googleapis.com/auth/documents.readonly'
+  'https://www.googleapis.com/auth/documents.readonly',
+  'https://www.googleapis.com/auth/gmail.send'
 ];
 
 const provider = new GoogleAuthProvider();

@@ -257,7 +257,7 @@ export default function App() {
 
   // Automatically load initial equipments from Google Sheet Webhook on startup
   useEffect(() => {
-    if (syncConfig.webhookUrl) {
+    if (syncConfig.webhookUrl && syncConfig.webhookUrl !== USER_APPS_SCRIPT_WEBHOOK_URL) {
       let isMounted = true;
       const pullInitialData = async () => {
         try {
