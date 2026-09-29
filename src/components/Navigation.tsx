@@ -287,38 +287,42 @@ export function Navigation({
         </div>
 
         {/* Mobile View Selector Pills */}
-        <div className="lg:hidden flex items-center gap-1 overflow-x-auto pb-2.5 pt-1 text-xs">
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-2.5 pt-1 text-xs scrollbar-none">
           <button
             onClick={() => onChangeView('dossier')}
-            className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold ${
-              currentView === 'dossier' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-bold flex items-center gap-1.5 transition shrink-0 ${
+              currentView === 'dossier' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Hồ Sơ ({totalEquipments})
+            <FileText className="w-3.5 h-3.5" />
+            <span>Hồ Sơ ({totalEquipments})</span>
           </button>
           <button
             onClick={() => onChangeView('analytics')}
-            className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold ${
-              currentView === 'analytics' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-bold flex items-center gap-1.5 transition shrink-0 ${
+              currentView === 'analytics' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Độ Tin Cậy
+            <Activity className="w-3.5 h-3.5" />
+            <span>Độ Tin Cậy</span>
           </button>
           <button
             onClick={() => onChangeView('planner')}
-            className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold ${
-              currentView === 'planner' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-bold flex items-center gap-1.5 transition shrink-0 ${
+              currentView === 'planner' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Lịch Bảo Dưỡng
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Lịch Bảo Dưỡng</span>
           </button>
           <button
             onClick={() => onChangeView('stations')}
-            className={`px-3 py-1 rounded-lg whitespace-nowrap font-semibold ${
-              currentView === 'stations' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-bold flex items-center gap-1.5 transition shrink-0 ${
+              currentView === 'stations' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Đài Trạm
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Đài Trạm</span>
           </button>
         </div>
 

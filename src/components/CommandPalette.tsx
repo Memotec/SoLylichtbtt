@@ -148,10 +148,18 @@ export function CommandPalette({
       const nameMatch = eq.general.name?.toLowerCase().includes(q);
       const serialMatch = eq.general.serial?.toLowerCase().includes(q);
       const modelMatch = eq.general.model?.toLowerCase().includes(q);
-      const freqMatch = eq.spec.channelFreq?.toLowerCase().includes(q);
+      const freqMatch = eq.spec?.channelFreq?.toLowerCase().includes(q);
       const stationMatch = eq.org.stationName?.toLowerCase().includes(q) || eq.org.location?.toLowerCase().includes(q);
       const catMatch = eq.general.category?.toLowerCase().includes(q);
-      return nameMatch || serialMatch || modelMatch || freqMatch || stationMatch || catMatch;
+      const assetMatch = eq.general.assetNo?.toLowerCase().includes(q);
+      const ipMatch = eq.spec?.mgmtIp?.toLowerCase().includes(q);
+      const engineerMatch = eq.org.primaryEngineer?.toLowerCase().includes(q);
+      const compMatch = eq.components?.some(c => 
+        c.name.toLowerCase().includes(q) || 
+        c.partNo.toLowerCase().includes(q) || 
+        c.serial.toLowerCase().includes(q)
+      );
+      return nameMatch || serialMatch || modelMatch || freqMatch || stationMatch || catMatch || assetMatch || ipMatch || engineerMatch || compMatch;
     }).map(eq => ({
       id: `eq-${eq.id}`,
       type: 'equipment' as const,

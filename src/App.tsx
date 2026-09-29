@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SAMPLE_EQUIPMENTS } from './data/sampleEquipments';
 import { Equipment } from './types';
 import { Navigation } from './components/Navigation';
@@ -296,20 +296,34 @@ export default function App() {
     }
   }, [equipments]);
 
+  const toastTimeoutRef = useRef<any>(null);
+  const autoSaveToastTimeoutRef = useRef<any>(null);
+
   // Show Toast helper
   const showToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage({ text, type });
-    setTimeout(() => {
+    toastTimeoutRef.current = setTimeout(() => {
       setToastMessage(null);
+      toastTimeoutRef.current = null;
     }, 3200);
   };
 
   const currentEquipment = equipments.find(e => e.id === selectedEquipmentId) || equipments[0] || null;
 
-  // Equipment update handler
+  // Equipment update handler with debounced autosave confirmation
   const handleUpdateEquipment = (updated: Equipment) => {
     setEquipments(prev => prev.map(e => e.id === updated.id ? updated : e));
-    showToast(`Đã tự động lưu hồ sơ "${updated.general.name}"`, 'info');
+    setLastSavedTime(new Date().toISOString());
+    if (autoSaveToastTimeoutRef.current) {
+      clearTimeout(autoSaveToastTimeoutRef.current);
+    }
+    autoSaveToastTimeoutRef.current = setTimeout(() => {
+      showToast(`Đã tự động lưu hồ sơ "${updated.general.name}"`, 'info');
+      autoSaveToastTimeoutRef.current = null;
+    }, 1200);
   };
 
   // Add Equipment handler

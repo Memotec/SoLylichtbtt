@@ -24,6 +24,7 @@ import {
   Zap,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
   X,
   SlidersHorizontal,
   RotateCcw,
@@ -83,6 +84,7 @@ export function EquipmentDashboard({
   isAutoSyncing = false
 }: EquipmentDashboardProps) {
   const [subTab, setSubTab] = useState<'general' | 'specs' | 'components' | 'maintenance' | 'repair' | 'transfer' | 'licenses'>('general');
+  const [mobileTab, setMobileTab] = useState<'list' | 'detail'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -182,15 +184,19 @@ export function EquipmentDashboard({
       const matchName = eq.general.name?.toLowerCase().includes(q);
       const matchSerial = eq.general.serial?.toLowerCase().includes(q);
       const matchModel = eq.general.model?.toLowerCase().includes(q);
+      const matchAssetNo = eq.general.assetNo?.toLowerCase().includes(q);
+      const matchFreq = eq.spec?.channelFreq?.toLowerCase().includes(q);
+      const matchIp = eq.spec?.mgmtIp?.toLowerCase().includes(q);
       const matchId = eq.id?.toLowerCase().includes(q);
       const matchLocation = eq.org.location?.toLowerCase().includes(q) || eq.org.stationName?.toLowerCase().includes(q);
+      const matchEngineer = eq.org.primaryEngineer?.toLowerCase().includes(q);
       const matchComponents = eq.components?.some(c => 
         c.name.toLowerCase().includes(q) || 
         c.serial.toLowerCase().includes(q) ||
         c.partNo.toLowerCase().includes(q)
       );
 
-      const matchSearch = matchName || matchSerial || matchModel || matchId || matchLocation || matchComponents;
+      const matchSearch = matchName || matchSerial || matchModel || matchAssetNo || matchFreq || matchIp || matchId || matchLocation || matchEngineer || matchComponents;
 
       return matchSearch && matchCategory && matchStatus && matchStation;
     });
@@ -474,6 +480,7 @@ export function EquipmentDashboard({
       repair: []
     };
     onAddEquipment(newEquipment);
+    setMobileTab('detail');
     setIsAddingEqModal(false);
   };
 
@@ -683,11 +690,42 @@ export function EquipmentDashboard({
         </div>
       </div>
 
+      {/* Mobile Workspace Mode Switcher (Phones & Tablets) */}
+      <div className="lg:hidden flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button
+          type="button"
+          onClick={() => setMobileTab('list')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            mobileTab === 'list'
+              ? 'bg-white text-blue-900 shadow-2xs font-bold border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span>Danh Sách ({filteredEquipments.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('detail')}
+          disabled={!currentEquipment}
+          className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            mobileTab === 'detail'
+              ? 'bg-white text-blue-900 shadow-2xs font-bold border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900 disabled:opacity-40'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[150px]">
+            {currentEquipment ? currentEquipment.general.name : 'Chi Tiết'}
+          </span>
+        </button>
+      </div>
+
       {/* MAIN TWO-COLUMN WORKSPACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* LEFT COLUMN: EQUIPMENT LIST SELECTOR */}
-        <div className="lg:col-span-4 space-y-3">
+        <div className={`lg:col-span-4 space-y-3 ${mobileTab === 'detail' ? 'hidden lg:block' : 'block'}`}>
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -754,7 +792,10 @@ export function EquipmentDashboard({
                   <div
                     key={eq.id}
                     id={`eq-card-${eq.id}`}
-                    onClick={() => onSelectEquipment(eq.id)}
+                    onClick={() => {
+                      onSelectEquipment(eq.id);
+                      setMobileTab('detail');
+                    }}
                     className={`p-3.5 rounded-xl border transition-all cursor-pointer relative ${
                       isSelected
                         ? 'bg-slate-50 border-blue-600 shadow-2xs ring-1 ring-blue-600'
@@ -815,13 +856,23 @@ export function EquipmentDashboard({
         </div>
 
         {/* RIGHT COLUMN: ACTIVE EQUIPMENT DETAILS & 7 SUB-TABS */}
-        <div className="lg:col-span-8">
+        <div className={`lg:col-span-8 ${mobileTab === 'list' ? 'hidden lg:block' : 'block'}`}>
           {currentEquipment ? (
             <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden flex flex-col">
               
               {/* Profile Header Banner */}
               <div className="bg-slate-900 p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 w-full md:w-auto">
+                  {/* Mobile Back to List Button */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab('list')}
+                    className="lg:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300 hover:text-white mb-2 cursor-pointer bg-slate-800/90 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 transition shadow-2xs"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Quay lại danh sách ({filteredEquipments.length})</span>
+                  </button>
+
                   <div className="flex items-center gap-2 text-xs text-slate-300 font-mono">
                     <span className="font-semibold text-sky-400">{currentEquipment.general.category}</span>
                     <span aria-hidden="true" className="text-slate-600">·</span>
