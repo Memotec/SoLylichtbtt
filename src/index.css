@@ -44,8 +44,34 @@
     background: #ffffff !important;
   }
 
+  .report-print-container {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 5mm !important;
+    margin: 0 !important;
+  }
+
+  .report-print-container table {
+    page-break-inside: auto;
+  }
+
+  .report-print-container tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .report-print-container thead {
+    display: table-header-group;
+  }
+
+  .report-print-container tfoot {
+    display: table-footer-group;
+  }
+
   @page {
-    size: A4 portrait;
-    margin: 0;
+    size: auto;
+    margin: 8mm;
   }
 }

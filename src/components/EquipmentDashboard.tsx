@@ -62,6 +62,7 @@ interface EquipmentDashboardProps {
   lastSavedTime: string | null;
   syncConfig?: GoogleSheetsSyncConfig;
   isAutoSyncing?: boolean;
+  onOpenReport?: () => void;
 }
 
 export function EquipmentDashboard({
@@ -81,7 +82,8 @@ export function EquipmentDashboard({
   isSaving,
   lastSavedTime,
   syncConfig,
-  isAutoSyncing = false
+  isAutoSyncing = false,
+  onOpenReport
 }: EquipmentDashboardProps) {
   const [subTab, setSubTab] = useState<'general' | 'specs' | 'components' | 'maintenance' | 'repair' | 'transfer' | 'licenses'>('general');
   const [mobileTab, setMobileTab] = useState<'list' | 'detail'>('list');
@@ -121,7 +123,8 @@ export function EquipmentDashboard({
     location: 'Sân bay Quốc tế Tân Sơn Nhất',
     primaryEngineer: 'KS. Trực ban kỹ thuật',
     power: '50W',
-    channelFreq: '118.100 MHz'
+    channelFreq: '118.100 MHz',
+    technicalNotes: ''
   });
 
   // Active Equipment QR Code state
@@ -195,8 +198,9 @@ export function EquipmentDashboard({
         c.serial.toLowerCase().includes(q) ||
         c.partNo.toLowerCase().includes(q)
       );
+      const matchNotes = eq.technicalNotes?.toLowerCase().includes(q) || eq.spec?.technicalNotes?.toLowerCase().includes(q);
 
-      const matchSearch = matchName || matchSerial || matchModel || matchAssetNo || matchFreq || matchIp || matchId || matchLocation || matchEngineer || matchComponents;
+      const matchSearch = matchName || matchSerial || matchModel || matchAssetNo || matchFreq || matchIp || matchId || matchLocation || matchEngineer || matchComponents || matchNotes;
 
       return matchSearch && matchCategory && matchStatus && matchStation;
     });
@@ -467,11 +471,13 @@ export function EquipmentDashboard({
         supervisor: 'KS. Trần Minh Trí',
         contactPhone: '028.3848.5383'
       },
+      technicalNotes: newEqForm.technicalNotes,
       spec: {
         power: newEqForm.power,
         channelFreq: newEqForm.channelFreq,
         mgmtIp: '192.168.10.100',
-        interface: 'VoIP ED-137C, LAN, E&M'
+        interface: 'VoIP ED-137C, LAN, E&M',
+        technicalNotes: newEqForm.technicalNotes
       },
       components: [
         { id: 'c1', no: 1, name: 'Khối máy chính Main Unit', partNo: 'MU-01', serial: 'SN-MU-' + Date.now().toString().slice(-4), qty: 1, healthStatus: 'Tốt' }
@@ -640,6 +646,18 @@ export function EquipmentDashboard({
             <QrCode className="w-4 h-4 text-cyan-200" />
             <span>Quét QR (Mở Sổ PDF)</span>
           </button>
+
+          {onOpenReport && (
+            <button
+              type="button"
+              onClick={onOpenReport}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
+              title="Xem Báo Cáo Tổng Hợp Sổ Lý Lịch Thiết Bị Chuẩn Form VATM"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>Báo Cáo Tổng Hợp</span>
+            </button>
+          )}
 
           <button
             id="btn-add-equipment-modal"
@@ -1345,6 +1363,36 @@ export function EquipmentDashboard({
                         </div>
                       </div>
                     </div>
+
+                    {/* GHI CHÚ KỸ THUẬT (SUBTAB 1) */}
+                    <div className="border border-slate-200 bg-slate-50/70 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          <span>Ghi Chú Kỹ Thuật</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-medium">Tự động lưu khi nhập</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={currentEquipment.technicalNotes ?? currentEquipment.spec?.technicalNotes ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const updated: Equipment = {
+                            ...currentEquipment,
+                            updatedAt: new Date().toISOString(),
+                            technicalNotes: val,
+                            spec: {
+                              ...currentEquipment.spec,
+                              technicalNotes: val
+                            }
+                          };
+                          onUpdateEquipment(updated);
+                        }}
+                        placeholder="Nhập ghi chú kỹ thuật, cấu hình đặc biệt, tần số dự phòng, hướng dẫn vận hành hoặc lưu ý bảo dưỡng cho thiết bị này..."
+                        className="w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl p-3 text-xs text-slate-800 focus:outline-none leading-relaxed font-medium"
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1422,11 +1470,41 @@ export function EquipmentDashboard({
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1 text-xs">Mô tả tính năng và nguyên lý hoạt động:</label>
                       <textarea
-                        rows={4}
+                        rows={3}
                         value={currentEquipment.spec.text || ''}
                         onChange={(e) => handleFieldChange('spec', 'text', e.target.value)}
                         placeholder="Nhập ghi chú hoặc tính năng kỹ thuật chi tiết của thiết bị..."
                         className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl p-3 text-xs text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none leading-relaxed"
+                      />
+                    </div>
+
+                    {/* GHI CHÚ KỸ THUẬT (SUBTAB 2) */}
+                    <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-blue-900 font-bold text-xs flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          <span>Ghi Chú Kỹ Thuật (Lưu ý đặc thù, cấu hình & firmware):</span>
+                        </label>
+                        <span className="text-[10px] text-blue-600 font-medium">Tự động lưu khi nhập</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={currentEquipment.technicalNotes ?? currentEquipment.spec?.technicalNotes ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const updated: Equipment = {
+                            ...currentEquipment,
+                            updatedAt: new Date().toISOString(),
+                            technicalNotes: val,
+                            spec: {
+                              ...currentEquipment.spec,
+                              technicalNotes: val
+                            }
+                          };
+                          onUpdateEquipment(updated);
+                        }}
+                        placeholder="Nhập ghi chú kỹ thuật, cấu hình tham số RF, ngưỡng cảnh báo, lịch sử nâng cấp firmware hoặc lưu ý đặc thù..."
+                        className="w-full bg-white border border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl p-3 text-xs text-slate-800 focus:outline-none leading-relaxed font-medium shadow-2xs"
                       />
                     </div>
                   </div>
@@ -2001,6 +2079,17 @@ export function EquipmentDashboard({
                     onChange={(e) => setNewEqForm({...newEqForm, primaryEngineer: e.target.value})}
                     placeholder="VD: KS. Nguyễn Văn An"
                     className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-700 font-semibold mb-1">Ghi chú kỹ thuật:</label>
+                  <textarea
+                    rows={2}
+                    value={newEqForm.technicalNotes}
+                    onChange={(e) => setNewEqForm({...newEqForm, technicalNotes: e.target.value})}
+                    placeholder="VD: Lưu ý cấu hình, tần số dự phòng, đặc tính kỹ thuật hoặc hướng dẫn vận hành..."
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl p-2.5 text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none leading-relaxed"
                   />
                 </div>
               </div>

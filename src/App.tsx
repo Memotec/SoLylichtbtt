@@ -6,6 +6,7 @@ import { EquipmentDashboard } from './components/EquipmentDashboard';
 import { AnalyticsView } from './components/AnalyticsView';
 import { MaintenancePlannerView } from './components/MaintenancePlannerView';
 import { StationDirectoryView } from './components/StationDirectoryView';
+import { ConsolidatedReportView } from './components/ConsolidatedReportView';
 import { CommandPalette } from './components/CommandPalette';
 import { PrintProfileModal } from './components/PrintProfileModal';
 import { QrScannerModal } from './components/QrScannerModal';
@@ -33,7 +34,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Active View Tab State
-  const [currentView, setCurrentView] = useState<'dossier' | 'analytics' | 'planner' | 'stations'>('dossier');
+  const [currentView, setCurrentView] = useState<'dossier' | 'analytics' | 'planner' | 'stations' | 'report'>('dossier');
 
   // Command Palette State
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -631,6 +632,7 @@ export default function App() {
             lastSavedTime={lastSavedTime}
             syncConfig={syncConfig}
             isAutoSyncing={isAutoSyncing}
+            onOpenReport={() => setCurrentView('report')}
           />
         )}
 
@@ -668,6 +670,18 @@ export default function App() {
               setIsQrLabelModalOpen(true);
             }}
             onSwitchToDossier={() => setCurrentView('dossier')}
+          />
+        )}
+
+        {currentView === 'report' && (
+          <ConsolidatedReportView
+            equipments={equipments}
+            onSelectEquipment={(id) => {
+              setSelectedEquipmentId(id);
+              setCurrentView('dossier');
+            }}
+            onSwitchToDossier={() => setCurrentView('dossier')}
+            onOpenPrintIndividualBooklet={handleOpenPrintModal}
           />
         )}
       </main>

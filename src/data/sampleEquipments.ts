@@ -10,6 +10,7 @@ export const INITIAL_EQUIPMENTS: Equipment[] = [
     updatedAt: '2025-04-03T10:30:00.000Z',
     pdfFileName: 'So_Ly_Lich_VHF_PARK_AIR_T6T_AACC.pdf',
     pdfUrl: 'https://cdn.vatm.vn/docs/cns/sample_vhf_t6t_booklet.pdf',
+    technicalNotes: 'Thiết bị phát VHF kênh chính 120.9 MHz. Kiểm tra đo kiểm định kỳ VSWR và nguồn dự phòng DC 24V mỗi tháng.',
     general: {
       name: 'Máy phát VHF liên lạc không - địa T6T (VHF PARK AIR T6T)',
       category: 'VHF',

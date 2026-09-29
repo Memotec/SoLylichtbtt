@@ -26,7 +26,7 @@ interface CommandPaletteProps {
   onOpenQrScanner: () => void;
   onOpenGoogleSheets: () => void;
   onAddNewEquipment: () => void;
-  onChangeView: (view: 'dossier' | 'analytics' | 'planner' | 'stations') => void;
+  onChangeView: (view: 'dossier' | 'analytics' | 'planner' | 'stations' | 'report') => void;
 }
 
 export function CommandPalette({
@@ -133,6 +133,14 @@ export function CommandPalette({
         category: 'Chuyển màn hình',
         icon: MapPin,
         action: () => { onChangeView('stations'); onClose(); }
+      },
+      {
+        id: 'act-view-report',
+        type: 'action' as const,
+        title: 'Báo cáo tổng hợp sổ lý lịch thiết bị chuẩn form VATM',
+        category: 'Chuyển màn hình',
+        icon: FileSpreadsheet,
+        action: () => { onChangeView('report'); onClose(); }
       }
     ];
 
@@ -159,7 +167,8 @@ export function CommandPalette({
         c.partNo.toLowerCase().includes(q) || 
         c.serial.toLowerCase().includes(q)
       );
-      return nameMatch || serialMatch || modelMatch || freqMatch || stationMatch || catMatch || assetMatch || ipMatch || engineerMatch || compMatch;
+      const noteMatch = eq.technicalNotes?.toLowerCase().includes(q) || eq.spec?.technicalNotes?.toLowerCase().includes(q);
+      return nameMatch || serialMatch || modelMatch || freqMatch || stationMatch || catMatch || assetMatch || ipMatch || engineerMatch || compMatch || noteMatch;
     }).map(eq => ({
       id: `eq-${eq.id}`,
       type: 'equipment' as const,

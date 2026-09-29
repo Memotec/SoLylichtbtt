@@ -151,6 +151,7 @@ export interface Equipment {
   updatedAt: string;
   pdfUrl?: string;
   pdfFileName?: string;
+  technicalNotes?: string;
   general: {
     name: string;
     category: EquipmentCategory | string;
@@ -190,6 +191,7 @@ export interface Equipment {
     text?: string;
     fullSpecText?: string;
     customLines?: string[];
+    technicalNotes?: string;
   };
   managingUnits?: ManagingUnit[];
   licenseFrequency?: LicenseItem[];

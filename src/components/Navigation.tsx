@@ -18,8 +18,8 @@ import { User } from 'firebase/auth';
 import { GoogleSheetsSyncConfig, DEFAULT_SHEET_TITLE } from '../services/googleSheets';
 
 interface NavigationProps {
-  currentView: 'dossier' | 'analytics' | 'planner' | 'stations';
-  onChangeView: (view: 'dossier' | 'analytics' | 'planner' | 'stations') => void;
+  currentView: 'dossier' | 'analytics' | 'planner' | 'stations' | 'report';
+  onChangeView: (view: 'dossier' | 'analytics' | 'planner' | 'stations' | 'report') => void;
   onOpenPrint: () => void;
   onOpenQrScanner: () => void;
   onOpenGoogleSheets: () => void;
@@ -199,6 +199,18 @@ export function Navigation({
               <MapPin className="w-3.5 h-3.5" />
               <span>Đài Trạm</span>
             </button>
+
+            <button
+              onClick={() => onChangeView('report')}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                currentView === 'report'
+                  ? 'bg-white text-blue-900 shadow-2xs font-bold border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Báo Cáo Tổng Hợp</span>
+            </button>
           </nav>
 
           {/* Right Action Tools */}
@@ -323,6 +335,15 @@ export function Navigation({
           >
             <MapPin className="w-3.5 h-3.5" />
             <span>Đài Trạm</span>
+          </button>
+          <button
+            onClick={() => onChangeView('report')}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-bold flex items-center gap-1.5 transition shrink-0 ${
+              currentView === 'report' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Báo Cáo Tổng Hợp</span>
           </button>
         </div>
 
