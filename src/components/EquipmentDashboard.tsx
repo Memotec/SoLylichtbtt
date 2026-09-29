@@ -104,7 +104,7 @@ export function EquipmentDashboard({
   // New Equipment Form State
   const [newEqForm, setNewEqForm] = useState({
     name: '',
-    category: 'VHF/UHF' as Equipment['general']['category'],
+    category: 'VHF' as Equipment['general']['category'],
     model: '',
     serial: '',
     assetNo: '',
@@ -1838,16 +1838,12 @@ export function EquipmentDashboard({
                   <label className="block text-slate-700 font-semibold mb-1">Chủng loại CNS:</label>
                   <select
                     value={newEqForm.category}
-                    onChange={(e) => setNewEqForm({...newEqForm, category: e.target.value as any})}
+                    onChange={(e) => setNewEqForm({...newEqForm, category: e.target.value})}
                     className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
                   >
-                    <option value="VHF/UHF">VHF/UHF Vô tuyến</option>
-                    <option value="Radar (PSR/SSR)">Radar (PSR/SSR)</option>
-                    <option value="D-VOR/DME">D-VOR/DME Dẫn đường</option>
-                    <option value="ILS/GP">ILS/GP Hạ cánh chính xác</option>
-                    <option value="VCCS">VCCS Chuyển mạch thoại</option>
-                    <option value="ADS-B">ADS-B Giám sát tự động</option>
-                    <option value="Nguồn/UPS">Nguồn & UPS</option>
+                    {EQUIPMENT_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 

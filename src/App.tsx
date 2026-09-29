@@ -254,6 +254,38 @@ export default function App() {
     }
   }, []);
 
+  // Automatically load initial equipments from Google Sheet Webhook on startup
+  useEffect(() => {
+    if (syncConfig.webhookUrl) {
+      let isMounted = true;
+      const pullInitialData = async () => {
+        try {
+          const { fetchEquipmentsViaWebhook } = await import('./services/googleSheets');
+          // Wait slightly for app to render nicely
+          await new Promise(resolve => setTimeout(resolve, 600));
+          if (!isMounted) return;
+          
+          showToast('Đang tải dữ liệu gốc từ Google Sheet...', 'info');
+          const latestEquipments = await fetchEquipmentsViaWebhook(syncConfig.webhookUrl);
+          
+          if (isMounted && latestEquipments && latestEquipments.length > 0) {
+            setEquipments(latestEquipments);
+            if (latestEquipments.length > 0) {
+              setSelectedEquipmentId(latestEquipments[0].id);
+            }
+            showToast(`Đã tự động nạp thành công ${latestEquipments.length} thiết bị từ Google Sheet!`, 'success');
+          }
+        } catch (err: any) {
+          console.warn('Auto-pull on startup skipped or failed:', err);
+        }
+      };
+      pullInitialData();
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [syncConfig.webhookUrl]);
+
   // Sync state to LocalStorage
   useEffect(() => {
     try {

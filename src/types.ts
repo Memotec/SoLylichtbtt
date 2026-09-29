@@ -133,12 +133,12 @@ export const STATION_METADATA_LIST: StationMetadata[] = [
 export const EQUIPMENT_CATEGORIES = [
   'VHF',
   'HF',
-  'Ghép kênh',
-  'Viba',
+  'VIBA',
   'VSAT',
-  'Tổng đài',
-  'VCCS',
+  'ADS-B',
+  'Nokia',
   'Firewall',
+  'Tổng Đài',
   'Thiết bị khác'
 ] as const;
 
