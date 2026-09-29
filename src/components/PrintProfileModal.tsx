@@ -775,26 +775,35 @@ export function PrintProfileModal({
 
           @media print {
             @page {
-              size: ${paperSize === 'A5' ? 'A5 portrait' : 'A4 portrait'};
-              margin: ${paperSize === 'A5' ? '5mm' : '10mm'};
+              size: ${paperSize === 'A5' ? 'A5' : 'A4'} portrait;
+              margin: 0 !important; /* Hide browser headers & footers entirely */
             }
             body {
               background: #ffffff !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             .no-print {
               display: none !important;
             }
             
             .print-cover-page, .print-page {
-              min-height: ${paperSize === 'A5' ? '195mm' : '272mm'} !important;
-              padding: ${paperSize === 'A5' ? '8mm 10mm' : '15mm 20mm'} !important;
-              font-size: ${paperSize === 'A5' ? '8.5pt' : '12pt'} !important;
-              line-height: ${paperSize === 'A5' ? '1.4' : '1.8'} !important;
+              width: ${paperSize === 'A5' ? '148mm' : '210mm'} !important;
+              height: ${paperSize === 'A5' ? '210mm' : '297mm'} !important;
+              max-height: ${paperSize === 'A5' ? '210mm' : '297mm'} !important;
+              padding: ${paperSize === 'A5' ? '12mm 15mm' : '20mm 25mm'} !important;
+              font-size: ${paperSize === 'A5' ? '8.5pt' : '11.5pt'} !important;
+              line-height: ${paperSize === 'A5' ? '1.35' : '1.75'} !important;
               border: none !important;
               box-shadow: none !important;
               margin: 0 !important;
               page-break-after: always !important;
               break-after: page !important;
+              box-sizing: border-box !important;
+              position: relative !important;
+              overflow: hidden !important;
             }
 
             /* Adjust cover border for print */
@@ -841,7 +850,7 @@ export function PrintProfileModal({
             {/* TRANG 1: BÌA SỔ LÝ LỊCH (COVER PAGE) */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 1) && (
-              <div className="print-cover-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border-4 border-double border-black relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-cover-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border-4 border-double border-black relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 
                 {/* Header Bìa */}
                 <div>
@@ -930,7 +939,7 @@ export function PrintProfileModal({
             {/* TRANG 2: MỤC LỤC & 1- CƠ QUAN, ĐƠN VỊ QUẢN LÝ */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 2) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-6">
                   
                   {/* Mục Lục */}
@@ -1023,7 +1032,7 @@ export function PrintProfileModal({
             {/* TRANG 3: 2 - SƠ LƯỢC THIẾT BỊ & GIẤY PHÉP */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 3) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-5">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     2 - SƠ LƯỢC THIẾT BỊ
@@ -1144,7 +1153,7 @@ export function PrintProfileModal({
             {/* TRANG 4: 2.1 - ĐẶC TÍNH KỸ THUẬT */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 4) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     2.1 - ĐẶC TÍNH KỸ THUẬT
@@ -1167,7 +1176,7 @@ export function PrintProfileModal({
             {/* TRANG 5: 2.2 - THÀNH PHẦN THIẾT BỊ */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 5) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     2.2 - THÀNH PHẦN THIẾT BỊ
@@ -1237,7 +1246,7 @@ export function PrintProfileModal({
             {/* TRANG 6: 2.3 - TÀI LIỆU KỸ THUẬT KÈM THEO */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 6) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     2.3 - TÀI LIỆU KỸ THUẬT KÈM THEO
@@ -1303,7 +1312,7 @@ export function PrintProfileModal({
             {/* TRANG 7: 3 - BẢO DƯỠNG */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 7) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     3 - BẢO DƯỠNG
@@ -1366,7 +1375,7 @@ export function PrintProfileModal({
             {/* TRANG 8: 4 - KIỂM TRA - SỬA CHỮA - THAY THẾ - THAY ĐỔI */}
             {/* ================================================================ */}
             {(viewMode === 'all' || currentPage === 8) && (
-              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: '1050px' }}>
+              <div className="print-page bg-white text-black p-8 sm:p-12 rounded-xl shadow-2xl border border-slate-300 relative flex flex-col justify-between" style={{ minHeight: paperSize === 'A5' ? '740px' : '1050px' }}>
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-center">
                     4 - KIỂM TRA - SỬA CHỮA - THAY THẾ - THAY ĐỔI
