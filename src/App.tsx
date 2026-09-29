@@ -23,7 +23,8 @@ import {
   findOrCreateVatmSpreadsheet, 
   syncEquipmentsToSheet, 
   syncEquipmentsViaWebhook,
-  DEFAULT_SHEET_TITLE 
+  DEFAULT_SHEET_TITLE,
+  USER_APPS_SCRIPT_WEBHOOK_URL
 } from './services/googleSheets';
 
 const STORAGE_KEY = 'cns_equipments_data_v3';
@@ -112,40 +113,7 @@ export default function App() {
   useEffect(() => {
     if (!syncConfig.autoSyncEnabled) return;
 
-    // 1. Zero-login Webhook Auto-Sync (Highest Priority when URL provided)
-    if (syncConfig.webhookUrl) {
-      const timer = setTimeout(async () => {
-        try {
-          setIsAutoSyncing(true);
-          const res = await syncEquipmentsViaWebhook(syncConfig.webhookUrl, equipments);
-          const updated: GoogleSheetsSyncConfig = {
-            ...syncConfig,
-            lastSyncedAt: new Date().toISOString(),
-            lastSyncStatus: 'success',
-            lastSyncError: undefined,
-            lastSyncedCount: equipments.length,
-            spreadsheetUrl: res.spreadsheetUrl || syncConfig.spreadsheetUrl
-          };
-          setSyncConfig(updated);
-          saveSyncConfig(updated);
-        } catch (err: any) {
-          console.warn('Webhook auto-sync warning:', err);
-          const updated: GoogleSheetsSyncConfig = {
-            ...syncConfig,
-            lastSyncStatus: 'error',
-            lastSyncError: err.message
-          };
-          setSyncConfig(updated);
-          saveSyncConfig(updated);
-        } finally {
-          setIsAutoSyncing(false);
-        }
-      }, 1500);
-
-      return () => clearTimeout(timer);
-    }
-
-    // 2. OAuth Auto-Sync (When user is signed in with Google)
+    // 1. OAuth Auto-Sync (Always prefer OAuth first if logged in)
     if (currentUser) {
       const timer = setTimeout(async () => {
         const token = await getAccessToken();
@@ -200,6 +168,39 @@ export default function App() {
           setIsAutoSyncing(false);
         }
       }, 1800);
+
+      return () => clearTimeout(timer);
+    }
+
+    // 2. Zero-login Webhook Auto-Sync (Only when a CUSTOM non-default URL is provided)
+    if (syncConfig.webhookUrl && syncConfig.webhookUrl !== USER_APPS_SCRIPT_WEBHOOK_URL) {
+      const timer = setTimeout(async () => {
+        try {
+          setIsAutoSyncing(true);
+          const res = await syncEquipmentsViaWebhook(syncConfig.webhookUrl, equipments);
+          const updated: GoogleSheetsSyncConfig = {
+            ...syncConfig,
+            lastSyncedAt: new Date().toISOString(),
+            lastSyncStatus: 'success',
+            lastSyncError: undefined,
+            lastSyncedCount: equipments.length,
+            spreadsheetUrl: res.spreadsheetUrl || syncConfig.spreadsheetUrl
+          };
+          setSyncConfig(updated);
+          saveSyncConfig(updated);
+        } catch (err: any) {
+          console.warn('Webhook auto-sync warning:', err);
+          const updated: GoogleSheetsSyncConfig = {
+            ...syncConfig,
+            lastSyncStatus: 'error',
+            lastSyncError: err.message
+          };
+          setSyncConfig(updated);
+          saveSyncConfig(updated);
+        } finally {
+          setIsAutoSyncing(false);
+        }
+      }, 1500);
 
       return () => clearTimeout(timer);
     }
@@ -435,8 +436,52 @@ export default function App() {
 
   // Force sync immediately to Google Sheet (Webhook without login or OAuth)
   const handleForceSyncNow = async () => {
-    // 1. If Webhook URL is configured, sync directly without requiring Google login
-    if (syncConfig.webhookUrl) {
+    // 1. If logged in with Google (OAuth), ALWAYS prefer OAuth mode first because it is 100% reliable and direct!
+    let token = await getAccessToken();
+    if (token) {
+      try {
+        setIsAutoSyncing(true);
+        let targetId = syncConfig.spreadsheetId;
+        if (!targetId) {
+          const vatmFile = await findOrCreateVatmSpreadsheet(token, equipments);
+          targetId = vatmFile.id;
+          const targetUrl = vatmFile.webViewLink || `https://docs.google.com/spreadsheets/d/${targetId}`;
+          const updated: GoogleSheetsSyncConfig = {
+            ...syncConfig,
+            spreadsheetId: targetId,
+            spreadsheetName: DEFAULT_SHEET_TITLE,
+            spreadsheetUrl: targetUrl,
+            lastSyncedAt: new Date().toISOString(),
+            lastSyncStatus: 'success',
+            lastSyncError: undefined
+          };
+          setSyncConfig(updated);
+          saveSyncConfig(updated);
+          showToast(`Đã tự động đồng bộ ${equipments.length} thiết bị lên "${DEFAULT_SHEET_TITLE}" (OAuth)!`, 'success');
+          return;
+        }
+
+        const { updatedRows, spreadsheetUrl } = await syncEquipmentsToSheet(token, targetId, equipments);
+        const updated: GoogleSheetsSyncConfig = {
+          ...syncConfig,
+          spreadsheetUrl,
+          lastSyncedAt: new Date().toISOString(),
+          lastSyncStatus: 'success',
+          lastSyncError: undefined
+        };
+        setSyncConfig(updated);
+        saveSyncConfig(updated);
+        showToast(`Đã đồng bộ thành công ${updatedRows} thiết bị lên Google Sheets (OAuth)!`, 'success');
+        return;
+      } catch (err: any) {
+        console.warn('OAuth sync failed, falling back to Webhook:', err);
+      } finally {
+        setIsAutoSyncing(false);
+      }
+    }
+
+    // 2. If Webhook URL is custom (not the default template URL), attempt webhook sync
+    if (syncConfig.webhookUrl && syncConfig.webhookUrl !== USER_APPS_SCRIPT_WEBHOOK_URL) {
       try {
         setIsAutoSyncing(true);
         const res = await syncEquipmentsViaWebhook(syncConfig.webhookUrl, equipments);
@@ -450,7 +495,7 @@ export default function App() {
         };
         setSyncConfig(updated);
         saveSyncConfig(updated);
-        showToast(`Đã tự động đồng bộ ${equipments.length} thiết bị lên Google Sheet mà không cần đăng nhập!`, 'success');
+        showToast(`Đã tự động đồng bộ ${equipments.length} thiết bị lên Google Sheet qua Webhook!`, 'success');
         return;
       } catch (err: any) {
         showToast(`Lỗi đồng bộ Webhook: ${err.message}`, 'error');
@@ -460,63 +505,9 @@ export default function App() {
       }
     }
 
-    // 2. Otherwise use OAuth if user is signed in
-    let token = await getAccessToken();
-    if (!token && currentUser) {
-      try {
-        const res = await googleSignIn();
-        token = res?.accessToken || null;
-        if (res?.user) setCurrentUser(res.user);
-      } catch (err: any) {
-        showToast(`Đăng nhập Google thất bại: ${err.message}`, 'error');
-        return;
-      }
-    }
-
-    if (!token) {
-      setIsGoogleSheetsModalOpen(true);
-      showToast('Vui lòng thiết lập URL Webhook Google Sheet (Không cần đăng nhập) hoặc đăng nhập Google Drive.', 'info');
-      return;
-    }
-
-    try {
-      setIsAutoSyncing(true);
-      let targetId = syncConfig.spreadsheetId;
-      if (!targetId) {
-        const vatmFile = await findOrCreateVatmSpreadsheet(token, equipments);
-        targetId = vatmFile.id;
-        const targetUrl = vatmFile.webViewLink || `https://docs.google.com/spreadsheets/d/${targetId}`;
-        const updated: GoogleSheetsSyncConfig = {
-          ...syncConfig,
-          spreadsheetId: targetId,
-          spreadsheetName: DEFAULT_SHEET_TITLE,
-          spreadsheetUrl: targetUrl,
-          lastSyncedAt: new Date().toISOString(),
-          lastSyncStatus: 'success',
-          lastSyncError: undefined
-        };
-        setSyncConfig(updated);
-        saveSyncConfig(updated);
-        showToast(`Đã kết nối và đồng bộ lên "${DEFAULT_SHEET_TITLE}"!`, 'success');
-        return;
-      }
-
-      const { updatedRows, spreadsheetUrl } = await syncEquipmentsToSheet(token, targetId, equipments);
-      const updated: GoogleSheetsSyncConfig = {
-        ...syncConfig,
-        spreadsheetUrl,
-        lastSyncedAt: new Date().toISOString(),
-        lastSyncStatus: 'success',
-        lastSyncError: undefined
-      };
-      setSyncConfig(updated);
-      saveSyncConfig(updated);
-      showToast(`Đã đồng bộ thành công ${updatedRows} thiết bị lên "${syncConfig.spreadsheetName || DEFAULT_SHEET_TITLE}"!`, 'success');
-    } catch (err: any) {
-      showToast(`Lỗi đồng bộ: ${err.message}`, 'error');
-    } finally {
-      setIsAutoSyncing(false);
-    }
+    // 3. Fallback: If no custom Webhook is set and no Google login is active, prompt them
+    setIsGoogleSheetsModalOpen(true);
+    showToast('Đang dùng Webhook mặc định chưa triển khai. Vui lòng bấm "Đăng nhập Google Drive (OAuth)" hoặc điền Webhook riêng để bắt đầu đồng bộ.', 'info');
   };
 
   // Save to Sheets / Export action
@@ -536,12 +527,33 @@ export default function App() {
     setIsSaving(false);
   };
 
-  // Export to Google Doc handler
-  const handleExportDoc = (eq: Equipment) => {
-    showToast(`Đang kết xuất tài liệu Sổ lý lịch cho "${eq.general.name}"...`, 'info');
-    setTimeout(() => {
-      showToast(`Đã xuất Sổ lý lịch chuẩn VATM cho "${eq.general.name}"!`, 'success');
-    }, 1000);
+  // Export to Google Doc handler using Google Docs API & Google Auth
+  const handleExportDoc = async (eq: Equipment) => {
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        showToast('Vui lòng đăng nhập Google để sử dụng tính năng Google Docs...', 'info');
+        const loginRes = await googleSignIn();
+        if (!loginRes) {
+          throw new Error('Chưa đăng nhập Google hoặc phiên làm việc đã hết hạn.');
+        }
+        token = loginRes.accessToken;
+      }
+
+      showToast(`Đang kết xuất tài liệu Sổ lý lịch cho "${eq.general.name}" sang Google Doc...`, 'info');
+      const { exportEquipmentToGoogleDoc } = await import('./services/googleDocs');
+      const result = await exportEquipmentToGoogleDoc(token, eq);
+
+      showToast(`Đã xuất hồ sơ thành công sang Google Doc!`, 'success');
+      
+      // Open the document in a new window/tab safely
+      if (typeof window !== 'undefined') {
+        window.open(result.documentUrl, '_blank');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(`Lỗi xuất Google Doc: ${err.message}`, 'error');
+    }
   };
 
   return (
@@ -600,6 +612,7 @@ export default function App() {
             onOpenGoogleSheets={() => setIsGoogleSheetsModalOpen(true)}
             onExportCsv={handleExportCsv}
             onSaveToSheets={handleSaveToSheets}
+            onExportGoogleDoc={handleExportDoc}
             isSaving={isSaving}
             lastSavedTime={lastSavedTime}
             syncConfig={syncConfig}

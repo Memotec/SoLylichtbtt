@@ -212,7 +212,6 @@ export function PrintProfileModal({
           <div style="text-align:center; margin-top:15pt;">
             <img src="${qrDataUrl}" width="140" height="140" style="border:2.5px solid #000000; padding:4px; display:inline-block; background-color:#ffffff;" />
             <p style="font-size:10pt; font-weight:bold; margin-top:5pt; letter-spacing:0.5px;">MÃ QR TRUY XUẤT LÝ LỊCH ĐIỆN TỬ</p>
-            <p style="font-size:8.5pt; font-style:italic; color:#333333; margin-top:3pt; max-width:280pt; margin-left:auto; margin-right:auto; line-height:1.4;">Quét mã QR bằng Camera di động để truy cập tức thì Sổ lý lịch điện tử, cập nhật thông số đo kiểm định kỳ và nhật ký xử lý sự cố đài trạm.</p>
           </div>
           ` : ''}
         </div>
@@ -336,31 +335,7 @@ export function PrintProfileModal({
           </h3>
 
           <div style="font-size:12pt; line-height:2.4; padding:0 10pt;">
-            ${formData.spec.text && formData.spec.text.trim()
-              ? formData.spec.text.split('\n').map(line => line.trim()).filter(Boolean).map(line => `
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt; margin-bottom:4pt;">
-                  ${line}
-                </p>
-              `).join('')
-              : `
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt;">
-                  - Liên lạc thoại không - địa; điều chế: <strong>AM</strong>; Tần số: <strong>VHF</strong>; Dải tần: <strong>${formData.spec.channelFreq || '118 – 136.975 MHz'}</strong>
-                </p>
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt;">
-                  - Phân cực: <strong>Đứng</strong>; Công suất phát: <strong>${formData.spec.power || '50W'}</strong>; Công nghệ: <strong>Thể rắn</strong>
-                </p>
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt;">
-                  - Nguồn điện cung cấp: <strong>${formData.spec.powerSupply || 'AC 220V / 50Hz; DC 24 – 31V'}</strong>
-                </p>
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt;">
-                  - Hệ số sóng đứng (VSWR): <strong>${formData.spec.vswr || '≤ 1.15 : 1'}</strong>; Giao diện kết nối: <strong>${formData.spec.interface || 'VoIP ED-137, E&M'}</strong>
-                </p>
-                <p style="border-bottom:1px dotted #000; padding-bottom:2pt;">
-                  - Tầm phủ sóng hiệu dụng: <strong>${formData.spec.coverage || '150 NM'}</strong>
-                </p>
-              `
-            }
-            ${Array.from({ length: Math.max(3, 14 - (formData.spec.text ? formData.spec.text.split('\n').filter(Boolean).length : 5)) }).map(() => `
+            ${Array.from({ length: 15 }).map(() => `
               <p style="border-bottom:1px dotted #000; height:24pt; margin:0;">&nbsp;</p>
             `).join('')}
           </div>
@@ -769,6 +744,35 @@ export function PrintProfileModal({
 
         {/* Dynamic Print CSS for A4 / A5 */}
         <style>{`
+          /* Screen preview styles */
+          .print-cover-page, .print-page {
+            width: 100%;
+            min-height: ${paperSize === 'A5' ? '740px' : '1050px'} !important;
+            padding: ${paperSize === 'A5' ? '24px 32px' : '48px 60px'} !important;
+            font-size: ${paperSize === 'A5' ? '11px' : '14px'} !important;
+            line-height: ${paperSize === 'A5' ? '1.4' : '1.8'} !important;
+          }
+          
+          /* Compact spacing for A5 on screen */
+          ${paperSize === 'A5' ? `
+            .print-page h2, .print-page h3 {
+              font-size: 13px !important;
+              margin-bottom: 8px !important;
+            }
+            .print-page p {
+              margin-bottom: 4px !important;
+              line-height: 1.4 !important;
+            }
+            .print-page table {
+              margin-top: 4px !important;
+              margin-bottom: 6px !important;
+            }
+            .print-page th, .print-page td {
+              padding: 4px 6px !important;
+              font-size: 10px !important;
+            }
+          ` : ''}
+
           @media print {
             @page {
               size: ${paperSize === 'A5' ? 'A5 portrait' : 'A4 portrait'};
@@ -780,21 +784,44 @@ export function PrintProfileModal({
             .no-print {
               display: none !important;
             }
+            
+            .print-cover-page, .print-page {
+              min-height: ${paperSize === 'A5' ? '195mm' : '272mm'} !important;
+              padding: ${paperSize === 'A5' ? '8mm 10mm' : '15mm 20mm'} !important;
+              font-size: ${paperSize === 'A5' ? '8.5pt' : '12pt'} !important;
+              line-height: ${paperSize === 'A5' ? '1.4' : '1.8'} !important;
+              border: none !important;
+              box-shadow: none !important;
+              margin: 0 !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+
+            /* Adjust cover border for print */
+            .print-cover-page {
+              border: 4px double #000000 !important;
+            }
+
             ${paperSize === 'A5' ? `
-              .print-cover-page, .print-page-box {
-                min-height: 195mm !important;
-                padding: 6mm 8mm !important;
-                font-size: 8.5pt !important;
-                margin-bottom: 0 !important;
+              .print-page h2, .print-page h3 {
+                font-size: 10pt !important;
+                margin-bottom: 6pt !important;
               }
-              table th, table td {
+              .print-page table th, .print-page table td {
                 padding: 2.5pt 4pt !important;
                 font-size: 8pt !important;
               }
+              .print-page .page-number {
+                margin-top: 6pt !important;
+              }
             ` : `
-              .print-cover-page, .print-page-box {
-                min-height: 270mm !important;
-                padding: 12mm 15mm !important;
+              .print-page h2, .print-page h3 {
+                font-size: 14pt !important;
+                margin-bottom: 12pt !important;
+              }
+              .print-page table th, .print-page table td {
+                padding: 6pt 8pt !important;
+                font-size: 11pt !important;
               }
             `}
           }
@@ -885,16 +912,13 @@ export function PrintProfileModal({
                   </div>
 
                   {qrDataUrl && (
-                    <div className="flex items-center gap-3 pt-2 mt-1 border-t border-dotted border-black/30 max-w-xs">
+                    <div className="flex flex-col items-center pt-2 mt-1 border-t border-dotted border-black/30 w-32">
                       <img 
                         src={qrDataUrl} 
                         alt="Mã QR Sổ Lý Lịch" 
-                        className="w-14 h-14 border border-black p-0.5 bg-white shrink-0" 
+                        className="w-16 h-16 border border-black p-0.5 bg-white shrink-0 shadow-sm" 
                       />
-                      <div className="text-left text-[10px] text-slate-700 leading-tight">
-                        <p className="font-bold uppercase tracking-tight text-black">Mã QR Định Danh Sổ Điện Tử</p>
-                        <p className="italic text-slate-600 mt-0.5">Quét mã bằng điện thoại để xem trực tiếp Sổ lý lịch kỹ thuật & lịch sử thiết bị</p>
-                      </div>
+                      <p className="text-[9px] font-bold uppercase tracking-tight text-black mt-1">MÃ QR SỔ LÝ LỊCH</p>
                     </div>
                   )}
                 </div>
@@ -1126,32 +1150,10 @@ export function PrintProfileModal({
                     2.1 - ĐẶC TÍNH KỸ THUẬT
                   </h3>
 
-                  {/* Các dòng kẻ chấm chứa thông số kỹ thuật chuẩn mẫu */}
-                  <div className="text-xs sm:text-sm leading-relaxed space-y-3 font-normal">
-                    <p className="border-b border-dotted border-black pb-1">
-                      - Liên lạc thoại không - địa; điều chế: <strong>AM</strong>; Tần số: <strong>VHF</strong>; Dải tần: <strong>{formData.spec.channelFreq || '118 – 136.975 MHz'}</strong>
-                    </p>
-                    <p className="border-b border-dotted border-black pb-1">
-                      - Phân cực: <strong>Đứng</strong>; Công suất: <strong>{formData.spec.power || '50W'}</strong>; Công nghệ: <strong>Thể rắn</strong>
-                    </p>
-                    <p className="border-b border-dotted border-black pb-1">
-                      - Nguồn điện: <strong>AC 220V / 50Hz ; DC 24 – 31V</strong>
-                    </p>
-                    <p className="border-b border-dotted border-black pb-1">
-                      - Hệ số sóng đứng (VSWR): <strong>{formData.spec.vswr || '≤ 1.15 : 1'}</strong>; Tầm phủ hiệu dụng: <strong>{formData.spec.coverage || '150 NM'}</strong>
-                    </p>
-                    <p className="border-b border-dotted border-black pb-1">
-                      - Giao tiếp điều khiển & âm thanh: <strong>{formData.spec.interface || 'VoIP ED-137B/C, E&M 4-wire, V.24'}</strong>
-                    </p>
-                    {formData.spec.text && (
-                      <p className="border-b border-dotted border-black pb-1">
-                        - Chức năng nhiệm vụ: {formData.spec.text}
-                      </p>
-                    )}
-
-                    {/* Dòng kẻ chấm trống để viết thêm tay */}
-                    {Array.from({ length: 12 }).map((_, idx) => (
-                      <div key={`dot-line-${idx}`} className="border-b border-dotted border-black h-6"></div>
+                  {/* Các dòng kẻ chấm trống hoàn toàn để người dùng tự viết tay */}
+                  <div className="space-y-4 font-normal pt-2">
+                    {Array.from({ length: 15 }).map((_, idx) => (
+                      <div key={`dot-line-${idx}`} className="border-b border-dotted border-black h-8"></div>
                     ))}
                   </div>
 

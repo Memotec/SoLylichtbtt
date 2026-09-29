@@ -488,9 +488,13 @@ export async function syncEquipmentsViaWebhook(
     };
   } catch (err: any) {
     console.error('Webhook sync error:', err);
+    const isFailedToFetch = err.message?.includes('Failed to fetch') || !err.message;
+    const advice = isFailedToFetch 
+      ? ' Đang dùng đường dẫn Webhook mặc định chưa cấu hình. Hãy Đăng nhập Google Drive (OAuth) để tự động đồng bộ trực tiếp không cần Apps Script!'
+      : '';
     throw new Error(
-      'Không thể kết nối đến Webhook Apps Script: ' + (err.message || 'Failed to fetch') +
-      '. Lưu ý: Khi Triển khai (Deploy) trong Apps Script, mục "Ai có quyền truy cập (Who has access)" cần chọn "Bất kỳ ai (Anyone)".'
+      'Không thể kết nối đến Webhook Apps Script: ' + (err.message || 'Failed to fetch') + '.' + advice +
+      ' Lưu ý: Khi Triển khai (Deploy) trong Apps Script, mục "Ai có quyền truy cập (Who has access)" cần chọn "Bất kỳ ai (Anyone)".'
     );
   }
 }
@@ -542,8 +546,12 @@ export async function fetchEquipmentsViaWebhook(webhookUrl: string): Promise<Equ
     return [];
   } catch (err: any) {
     console.error('Fetch webhook error:', err);
+    const isFailedToFetch = err.message?.includes('Failed to fetch') || !err.message;
+    const advice = isFailedToFetch
+      ? ' Đang dùng đường dẫn Webhook mặc định chưa cấu hình. Bạn hãy bấm đăng nhập tài khoản Google Drive (OAuth) để lấy trực tiếp tệp!'
+      : '';
     throw new Error(
-      `Không thể đọc dữ liệu từ Webhook (${err.message || 'Failed to fetch'}). Vui lòng kiểm tra: 1) Triển khai Apps Script đã chọn quyền "Bất kỳ ai (Anyone)". 2) URL kết thúc bằng "/exec".`
+      `Không thể đọc dữ liệu từ Webhook (${err.message || 'Failed to fetch'}).${advice} Vui lòng kiểm tra: 1) Triển khai Apps Script đã chọn quyền "Bất kỳ ai (Anyone)". 2) URL kết thúc bằng "/exec".`
     );
   }
 }

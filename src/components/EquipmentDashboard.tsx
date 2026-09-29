@@ -56,6 +56,7 @@ interface EquipmentDashboardProps {
   onOpenGoogleSheets: () => void;
   onExportCsv: () => void;
   onSaveToSheets: () => void;
+  onExportGoogleDoc?: (equipment: Equipment) => void;
   isSaving: boolean;
   lastSavedTime: string | null;
   syncConfig?: GoogleSheetsSyncConfig;
@@ -75,6 +76,7 @@ export function EquipmentDashboard({
   onOpenGoogleSheets,
   onExportCsv,
   onSaveToSheets,
+  onExportGoogleDoc,
   isSaving,
   lastSavedTime,
   syncConfig,
@@ -847,6 +849,17 @@ export function EquipmentDashboard({
                     <Copy className="w-3.5 h-3.5 text-sky-400" />
                     <span className="hidden sm:inline">Nhân Bản</span>
                   </button>
+
+                  {onExportGoogleDoc && (
+                    <button
+                      onClick={() => onExportGoogleDoc(currentEquipment)}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                      title="Xuất hồ sơ lý lịch thiết bị sang Google Docs (soạn thảo trực tuyến)"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Xuất Google Doc</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => onOpenQrLabelModal(currentEquipment)}
