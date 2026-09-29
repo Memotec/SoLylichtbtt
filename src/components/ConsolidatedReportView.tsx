@@ -1,26 +1,22 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   FileText, 
   Printer, 
   Download, 
-  Filter, 
   Search, 
   X, 
-  Radio, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Wrench, 
-  Clock, 
-  Layers, 
-  Building2, 
   ArrowLeft,
-  ChevronRight,
-  ShieldCheck,
   Cpu,
-  RotateCcw,
-  Sparkles,
-  MapPin,
-  FileSpreadsheet
+  FileSpreadsheet,
+  LayoutGrid,
+  FileCode,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { Equipment, CNS_STATIONS, EQUIPMENT_CATEGORIES } from '../types';
 
@@ -37,12 +33,20 @@ export function ConsolidatedReportView({
   onSwitchToDossier,
   onOpenPrintIndividualBooklet
 }: ConsolidatedReportViewProps) {
+  // Filters state
   const [stationFilter, setStationFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [groupBy, setGroupBy] = useState<'none' | 'station' | 'category'>('none');
-  const [isCompact, setIsCompact] = useState(false);
+
+  // Print & Layout Customization State
+  const [paperOrientation, setPaperOrientation] = useState<'landscape' | 'portrait'>('landscape');
+  const [paginationMode, setPaginationMode] = useState<'paged' | 'continuous'>('paged');
+  const [rowsPerPage, setRowsPerPage] = useState<number>(8);
+  const [fontScale, setFontScale] = useState<'standard' | 'compact'>('standard');
+  const [activeScreenTab, setActiveScreenTab] = useState<'all' | 'paged_preview'>('all');
+  const [previewPageIdx, setPreviewPageIdx] = useState<number>(0);
 
   // Filtered equipment list
   const filteredList = useMemo(() => {
@@ -105,6 +109,54 @@ export function ConsolidatedReportView({
       items
     }));
   }, [filteredList, groupBy]);
+
+  // Chunked pages for Smart Pagination mode (A4 Paged Book Mode)
+  const pagedChunks = useMemo(() => {
+    const chunks: Equipment[][] = [];
+    for (let i = 0; i < filteredList.length; i += rowsPerPage) {
+      chunks.push(filteredList.slice(i, i + rowsPerPage));
+    }
+    return chunks.length > 0 ? chunks : [[]];
+  }, [filteredList, rowsPerPage]);
+
+  const totalPages = pagedChunks.length;
+
+  // Ensure preview page index is in range
+  useEffect(() => {
+    if (previewPageIdx >= totalPages) {
+      setPreviewPageIdx(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, previewPageIdx]);
+
+  // Dynamic Print Injection: forces browser print dialog to adopt exact orientation & margins
+  const handlePrint = () => {
+    let styleTag = document.getElementById('report-page-print-style');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'report-page-print-style';
+      document.head.appendChild(styleTag);
+    }
+    
+    if (paperOrientation === 'landscape') {
+      styleTag.innerHTML = `
+        @page {
+          size: A4 landscape !important;
+          margin: 6mm 8mm !important;
+        }
+      `;
+    } else {
+      styleTag.innerHTML = `
+        @page {
+          size: A4 portrait !important;
+          margin: 8mm 8mm !important;
+        }
+      `;
+    }
+
+    setTimeout(() => {
+      window.print();
+    }, 60);
+  };
 
   // Export report to CSV / Excel
   const handleExportCsv = () => {
@@ -182,20 +234,207 @@ export function ConsolidatedReportView({
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const todayStr = useMemo(() => {
     const d = new Date();
     return `Ngày ${d.getDate()} tháng ${d.getMonth() + 1} năm ${d.getFullYear()}`;
   }, []);
 
+  // Render Table Header Helper
+  const renderTableHeader = () => (
+    <thead className="bg-slate-100 text-black uppercase font-bold text-[9.5px] border-b border-black">
+      <tr>
+        <th className="border border-black p-1.5 text-center w-8">STT</th>
+        <th className="border border-black p-1.5 min-w-[130px]">Tên Thiết Bị / Loại</th>
+        <th className="border border-black p-1.5 min-w-[110px]">Model & Serial</th>
+        <th className="border border-black p-1.5 min-w-[90px]">Mã TS / Số Sổ</th>
+        <th className="border border-black p-1.5 min-w-[100px]">Hãng & Nước SX / Năm</th>
+        <th className="border border-black p-1.5 min-w-[110px]">Đài Trạm & Vị Trí</th>
+        <th className="border border-black p-1.5 min-w-[95px]">Tần Số / P danh định</th>
+        <th className="border border-black p-1.5 text-center min-w-[90px]">Trạng Thái</th>
+        <th className="border border-black p-1.5 text-center w-10">LK</th>
+        <th className="border border-black p-1.5 min-w-[100px]">Bảo Dưỡng Gần Nhất</th>
+        <th className="border border-black p-1.5 min-w-[120px]">Giấy Phép VTĐ & Khai Thác</th>
+        <th className="border border-black p-1.5 min-w-[130px]">Kỹ Sư & Ghi Chú KT</th>
+      </tr>
+    </thead>
+  );
+
+  // Render Table Row Helper
+  const renderTableRow = (eq: Equipment, overallIdx: number) => {
+    const latestMaint = eq.maintenance && eq.maintenance.length > 0
+      ? eq.maintenance[eq.maintenance.length - 1]
+      : null;
+    const freqLic = eq.licenseFrequency && eq.licenseFrequency.length > 0
+      ? eq.licenseFrequency[0]
+      : null;
+    const operLic = eq.licenseOperation && eq.licenseOperation.length > 0
+      ? eq.licenseOperation[0]
+      : null;
+
+    return (
+      <tr 
+        key={eq.id}
+        onClick={() => {
+          onSelectEquipment(eq.id);
+          onSwitchToDossier();
+        }}
+        className="hover:bg-blue-50/50 transition cursor-pointer group break-inside-avoid"
+        title="Bấm để xem chi tiết hồ sơ thiết bị này"
+      >
+        <td className="border border-black p-1.5 text-center font-mono font-medium">
+          {overallIdx + 1}
+        </td>
+
+        <td className="border border-black p-1.5">
+          <div className="font-bold text-slate-900 group-hover:text-blue-700 transition leading-snug">
+            {eq.general.name}
+          </div>
+          <div className="text-[9px] text-slate-500 font-mono mt-0.5">
+            Loại: <span className="font-semibold text-slate-700">{eq.general.category}</span>
+          </div>
+        </td>
+
+        <td className="border border-black p-1.5 font-mono">
+          <div className="font-bold text-slate-800 leading-snug">{eq.general.model}</div>
+          <div className="text-[9px] text-blue-900 font-bold mt-0.5">
+            SN: {eq.general.serial}
+          </div>
+        </td>
+
+        <td className="border border-black p-1.5 font-mono text-[9.5px]">
+          <div>TS: <strong className="text-slate-900">{eq.general.assetNo || '---'}</strong></div>
+          {eq.general.bookletNo && (
+            <div className="text-slate-600 text-[9px]">Sổ: {eq.general.bookletNo}</div>
+          )}
+        </td>
+
+        <td className="border border-black p-1.5 text-[9.5px]">
+          <div className="font-semibold text-slate-800 leading-snug">{eq.general.manufacturer}</div>
+          <div className="text-slate-600 text-[9px]">{eq.general.origin} ({eq.general.yearMade})</div>
+        </td>
+
+        <td className="border border-black p-1.5">
+          <div className="font-bold text-blue-900 leading-snug">{eq.org.stationName || 'AACC HCM'}</div>
+          <div className="text-[9px] text-slate-600 line-clamp-1">{eq.org.location}</div>
+        </td>
+
+        <td className="border border-black p-1.5 font-mono text-[9.5px]">
+          <div className="font-bold text-blue-800 leading-snug">{eq.spec?.channelFreq || '---'}</div>
+          {eq.spec?.power && (
+            <div className="text-slate-600 text-[9px]">P: {eq.spec.power}</div>
+          )}
+        </td>
+
+        <td className="border border-black p-1.5 text-center">
+          <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
+            eq.general.status === 'Đang khai thác' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+            eq.general.status === 'Đang bảo dưỡng' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+            eq.general.status === 'Chờ sửa chữa' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+            'bg-slate-100 text-slate-800 border border-slate-300'
+          }`}>
+            {eq.general.status}
+          </span>
+        </td>
+
+        <td className="border border-black p-1.5 text-center font-mono font-bold">
+          {eq.components?.length || 0}
+        </td>
+
+        <td className="border border-black p-1.5 text-[9.5px]">
+          {latestMaint ? (
+            <div>
+              <span className="font-mono font-bold text-slate-900">{latestMaint.date}</span>
+              <div className="text-emerald-700 font-semibold text-[9px]">{latestMaint.result}</div>
+            </div>
+          ) : (
+            <span className="text-slate-400 italic">Chưa ghi nhận</span>
+          )}
+        </td>
+
+        <td className="border border-black p-1.5 text-[9px] font-mono">
+          {freqLic ? (
+            <div>
+              VTĐ: <strong className="text-slate-900">{freqLic.no}</strong>
+              <span className="block text-slate-500 text-[8.5px]">Hạn: {freqLic.expireDate}</span>
+            </div>
+          ) : null}
+          {operLic ? (
+            <div className="mt-0.5">
+              KT: <strong className="text-slate-900">{operLic.no}</strong>
+              <span className="block text-slate-500 text-[8.5px]">Hạn: {operLic.expireDate}</span>
+            </div>
+          ) : null}
+          {!freqLic && !operLic && (
+            <span className="text-slate-400 italic">Theo giấy phép đài</span>
+          )}
+        </td>
+
+        <td className="border border-black p-1.5 text-[9.5px]">
+          <div className="font-bold text-blue-900">{eq.org.primaryEngineer}</div>
+          {(eq.technicalNotes || eq.spec?.technicalNotes) ? (
+            <div className="text-slate-700 italic line-clamp-1 mt-0.5 bg-slate-50 p-0.5 rounded border border-slate-200 text-[8.5px]">
+              {eq.technicalNotes || eq.spec?.technicalNotes}
+            </div>
+          ) : (
+            <span className="text-slate-400 italic">---</span>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
+  // Render Official Signature Block Helper
+  const renderSignatureBlock = () => (
+    <div className="report-signature-block pt-6 mt-6 border-t border-black space-y-4 break-inside-avoid">
+      <div className="text-[11px] leading-relaxed space-y-0.5">
+        <p><strong>* Ghi chú và khuyến nghị của bộ phận kỹ thuật:</strong></p>
+        <p className="italic text-slate-700">
+          1. Báo cáo tổng hợp số liệu kỹ thuật, tình trạng vận hành và nhật ký bảo dưỡng được trích xuất trực tiếp từ Hệ thống Sổ lý lịch thiết bị CNS điện tử - VATM.
+        </p>
+        <p className="italic text-slate-700">
+          2. Các thiết bị đang trong trạng thái "Đang bảo dưỡng" hoặc "Chờ sửa chữa" phải được tổ chức kỹ thuật trực ban theo dõi sát sao, tuân thủ đúng quy trình an toàn bảo đảm hoạt động bay.
+        </p>
+      </div>
+
+      {/* 3 Signature Boxes */}
+      <div className="grid grid-cols-3 gap-4 text-center text-xs pt-2">
+        <div className="space-y-1">
+          <p className="font-bold uppercase">NGƯỜI LẬP BÁO CÁO</p>
+          <p className="text-[10px] italic text-slate-600">(Ký, ghi rõ họ tên)</p>
+          <div className="h-16"></div>
+          <p className="font-bold text-slate-800">KS. Trực ban Kỹ thuật CNS</p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="font-bold uppercase">ĐỘI TRƯỞNG / TRƯỞNG ĐÀI TRẠM</p>
+          <p className="text-[10px] italic text-slate-600">(Ký, ghi rõ họ tên)</p>
+          <div className="h-16"></div>
+          <p className="font-bold text-slate-800">KS. Phụ trách Đài Trạm</p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="font-bold uppercase">GIÁM ĐỐC TRUNG TÂM / PHÊ DUYỆT</p>
+          <p className="text-[10px] italic text-slate-600">(Ký tên, đóng dấu)</p>
+          <div className="h-16"></div>
+          <p className="font-bold text-slate-800">Lãnh Đạo Trung Tâm BĐKT</p>
+        </div>
+      </div>
+
+      <div className="text-center text-[9px] text-slate-400 font-mono pt-2 border-t border-slate-200">
+        HỆ THỐNG QUẢN LÝ SỔ LÝ LỊCH THIẾT BỊ CNS · CÔNG TY QUẢN LÝ BAY MIỀN NAM (VATM)
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       
-      {/* TOP HEADER CONTROLS (NO PRINT) */}
+      {/* ========================================================================= */}
+      {/* TOP HEADER CONTROLS (SCREEN ONLY - HIDDEN IN PRINT) */}
+      {/* ========================================================================= */}
       <div className="no-print bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+        
+        {/* Top Action Bar */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -233,7 +472,7 @@ export function ConsolidatedReportView({
               type="button"
               onClick={handlePrint}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-              title="In báo cáo trực tiếp hoặc xuất PDF khổ A4 Landscape"
+              title="In báo cáo trực tiếp hoặc xuất PDF chuẩn A4 không bị nhảy trang"
             >
               <Printer className="w-4 h-4 text-sky-300" />
               <span>In Báo Cáo / Xuất PDF</span>
@@ -241,8 +480,129 @@ export function ConsolidatedReportView({
           </div>
         </div>
 
-        {/* Filters Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-slate-100 text-xs">
+        {/* PRINT SETTINGS DEDICATED PANEL */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 text-xs font-bold text-slate-700">
+            <span className="flex items-center gap-1.5 text-blue-900">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+              Cấu hình Trang In & Xuất PDF Chuẩn Khổ A4 (Chống Nhảy Trang):
+            </span>
+            <span className="text-[11px] text-slate-500 font-normal">
+              Định dạng sẽ tự động đồng bộ khi mở hộp thoại in
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            {/* Hướng Giấy In */}
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1 text-[11px]">Hướng trang in A4:</label>
+              <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPaperOrientation('landscape')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                    paperOrientation === 'landscape'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Khổ Ngang</span>
+                  <span className="text-[9px] opacity-80">(Đề xuất)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaperOrientation('portrait')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                    paperOrientation === 'portrait'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Khổ Dọc</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Chế Độ Ngắt Trang */}
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1 text-[11px]">Kiểu ngắt trang:</label>
+              <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPaginationMode('paged')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                    paginationMode === 'paged'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                  title="Phân trang A4 độc lập, có tiêu đề và số trang trên từng trang in, không bao giờ bị nhảy trang"
+                >
+                  <span>Trang A4 Chuẩn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaginationMode('continuous')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 ${
+                    paginationMode === 'continuous'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                  title="In liên tục dòng chảy tự nhiên"
+                >
+                  <span>Dòng Chảy</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Số Dòng / Trang (Khi dùng Trang A4 chuẩn) */}
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1 text-[11px]">Số thiết bị / trang in:</label>
+              <select
+                disabled={paginationMode !== 'paged'}
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-semibold focus:border-blue-500 focus:outline-none disabled:opacity-50 cursor-pointer"
+              >
+                <option value={6}>6 thiết bị / trang (Thoáng đãng, rộng rãi)</option>
+                <option value={8}>8 thiết bị / trang (Chuẩn khổ ngang)</option>
+                <option value={10}>10 thiết bị / trang (Tối ưu số trang)</option>
+                <option value={12}>12 thiết bị / trang (Thu gọn tối đa)</option>
+              </select>
+            </div>
+
+            {/* Cỡ Chữ Bảng In */}
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1 text-[11px]">Cỡ chữ in ấn:</label>
+              <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setFontScale('standard')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center ${
+                    fontScale === 'standard'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Chuẩn (10pt)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFontScale('compact')}
+                  className={`flex-1 py-1 rounded-lg font-bold text-xs transition cursor-pointer flex items-center justify-center ${
+                    fontScale === 'compact'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>Thu Gọn (9pt)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Filters Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 text-xs">
           {/* Search Box */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -313,6 +673,7 @@ export function ConsolidatedReportView({
             <option value="category">Nhóm theo Chủng loại</option>
           </select>
         </div>
+
       </div>
 
       {/* KPI STATS OVERVIEW (SCREEN ONLY) */}
@@ -370,58 +731,156 @@ export function ConsolidatedReportView({
       </div>
 
       {/* ========================================================================= */}
-      {/* CHUẨN FORM BÁO CÁO HÀNH CHÍNH & IN ẤN (PRINTABLE DOSSIER REPORT DOCUMENT) */}
+      {/* CHUẨN FORM BÁO CÁO HÀNH CHÍNH & IN ẤN CHỐNG NHẢY TRANG                   */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-slate-300 rounded-2xl shadow-sm p-6 sm:p-10 text-black font-sans report-print-container">
-        
-        {/* TIÊU NGỮ & CƠ QUAN BAN HÀNH BÁO CÁO CHUẨN FORM NHÀ NƯỚC / VATM */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-black">
-          <div className="text-center sm:text-left text-xs uppercase leading-relaxed font-bold">
-            <p className="text-[11px] font-medium text-slate-700">TỔNG CÔNG TY QUẢN LÝ BAY VIỆT NAM</p>
-            <p className="text-xs font-bold text-black">CÔNG TY QUẢN LÝ BAY MIỀN NAM</p>
-            <p className="text-[11px] text-slate-800 border-b border-black inline-block pb-0.5">TRUNG TÂM BẢO ĐẢM KỸ THUẬT</p>
-            <p className="text-[10px] normal-case text-slate-600 font-mono mt-1">Số: ... /BC-BĐKT-CNS</p>
-          </div>
 
-          <div className="text-center text-xs leading-relaxed">
-            <p className="font-bold uppercase text-xs">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-            <p className="font-bold border-b border-black inline-block pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
-            <p className="italic text-[11px] mt-2 text-slate-700">
-              TP. Hồ Chí Minh, {todayStr}
-            </p>
-          </div>
+      {/* CASE 1: PAGED A4 BOOK MODE (CHẾ ĐỘ TỪNG TRANG A4 - CHỐNG NHẢY TRANG 100%) */}
+      {paginationMode === 'paged' ? (
+        <div className="report-print-container space-y-8">
+          {pagedChunks.map((chunk, pageIdx) => {
+            const isFirstPage = pageIdx === 0;
+            const isLastPage = pageIdx === totalPages - 1;
+            const startIdx = pageIdx * rowsPerPage;
+
+            return (
+              <div 
+                key={`report-page-${pageIdx}`}
+                className={`report-page-sheet bg-white border border-slate-300 rounded-2xl shadow-sm p-6 sm:p-8 text-black font-sans relative flex flex-col justify-between ${
+                  fontScale === 'compact' ? 'text-[10px]' : 'text-[11px]'
+                } ${paperOrientation === 'landscape' ? 'landscape' : 'portrait'}`}
+                style={{
+                  minHeight: paperOrientation === 'landscape' ? '680px' : '980px'
+                }}
+              >
+                <div className="space-y-4 flex-1">
+                  
+                  {/* HEADER BANNER: FULL ON PAGE 1, COMPACT ON SUBSEQUENT PAGES */}
+                  {isFirstPage ? (
+                    <div className="space-y-4 report-header-banner">
+                      {/* TIÊU NGỮ & CƠ QUAN BAN HÀNH CHUẨN QUỐC GIA / VATM */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-black">
+                        <div className="text-center sm:text-left text-xs uppercase leading-relaxed font-bold">
+                          <p className="text-[11px] font-medium text-slate-700">TỔNG CÔNG TY QUẢN LÝ BAY VIỆT NAM</p>
+                          <p className="text-xs font-bold text-black">CÔNG TY QUẢN LÝ BAY MIỀN NAM</p>
+                          <p className="text-[11px] text-slate-800 border-b border-black inline-block pb-0.5">TRUNG TÂM BẢO ĐẢM KỸ THUẬT</p>
+                          <p className="text-[10px] normal-case text-slate-600 font-mono mt-1">Số: ... /BC-BĐKT-CNS</p>
+                        </div>
+
+                        <div className="text-center text-xs leading-relaxed">
+                          <p className="font-bold uppercase text-xs">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                          <p className="font-bold border-b border-black inline-block pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
+                          <p className="italic text-[11px] mt-1.5 text-slate-700">
+                            TP. Hồ Chí Minh, {todayStr}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* REPORT TITLE */}
+                      <div className="text-center py-2 space-y-1">
+                        <h1 className="text-base sm:text-lg font-bold uppercase tracking-wide text-black">
+                          BÁO CÁO TỔNG HỢP THEO DÕI SỔ LÝ LỊCH TRANG THIẾT BỊ CNS
+                        </h1>
+                        <p className="text-xs text-slate-800 italic">
+                          (Bảng kê hiện trạng kỹ thuật, linh kiện, kiểm tra bảo dưỡng và giấy phép khai thác)
+                        </p>
+                        <div className="flex items-center justify-center gap-3 text-[11px] text-slate-600 font-mono pt-0.5">
+                          <span>Phạm vi: <strong>{stationFilter === 'ALL' ? 'Toàn bộ các Đài trạm' : `Đài trạm ${stationFilter}`}</strong></span>
+                          <span>·</span>
+                          <span>Tổng số: <strong>{filteredList.length} thiết bị</strong></span>
+                          <span>·</span>
+                          <span>Ngày xuất: <strong>{new Date().toLocaleDateString('vi-VN')}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* COMPACT RUNNING HEADER ON PAGE > 1 */
+                    <div className="flex items-center justify-between pb-3 border-b border-black text-[10px] uppercase font-bold text-slate-700 report-header-banner">
+                      <span>CÔNG TY QUẢN LÝ BAY MIỀN NAM · TRUNG TÂM BẢO ĐẢM KỸ THUẬT</span>
+                      <span className="normal-case italic font-normal text-slate-500">
+                        Báo Cáo Tổng Hợp Sổ Lý Lịch Thiết Bị CNS (Tiếp theo - Trang {pageIdx + 1}/{totalPages})
+                      </span>
+                    </div>
+                  )}
+
+                  {/* BẢNG DỮ LIỆU CỦA TRANG HIỆN TẠI */}
+                  <div className="overflow-x-auto border border-black rounded-lg">
+                    <table className="w-full text-left border-collapse border border-black">
+                      {renderTableHeader()}
+                      <tbody className="divide-y divide-black/30">
+                        {chunk.length === 0 ? (
+                          <tr>
+                            <td colSpan={12} className="p-8 text-center text-slate-400">
+                              Không có dữ liệu thiết bị phù hợp với bộ lọc.
+                            </td>
+                          </tr>
+                        ) : (
+                          chunk.map((eq, cIdx) => renderTableRow(eq, startIdx + cIdx))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* NẾU LÀ TRANG CUỐI: HIỂN THỊ KHỐI CHỮ KÝ PHÊ DUYỆT */}
+                  {isLastPage && renderSignatureBlock()}
+                </div>
+
+                {/* FOOTER OF EACH A4 PAGE */}
+                <div className="pt-3 mt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <span>HỆ THỐNG SỔ LÝ LỊCH THIẾT BỊ CNS · VATM</span>
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                    Trang {pageIdx + 1} / {totalPages}
+                  </span>
+                  <span>{new Date().toLocaleTimeString('vi-VN')}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* REPORT TITLE BANNER */}
-        <div className="text-center py-6 space-y-1.5">
-          <h1 className="text-base sm:text-xl font-bold uppercase tracking-wide text-black">
-            BÁO CÁO TỔNG HỢP THEO DÕI SỔ LÝ LỊCH TRANG THIẾT BỊ CNS
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-800 italic">
-            (Bảng kê hiện trạng kỹ thuật, linh kiện, kiểm tra bảo dưỡng và giấy phép khai thác)
-          </p>
-          <div className="flex items-center justify-center gap-3 text-xs text-slate-600 font-mono pt-1">
-            <span>Phạm vi: <strong>{stationFilter === 'ALL' ? 'Toàn bộ các Đài trạm' : `Đài trạm ${stationFilter}`}</strong></span>
-            <span>·</span>
-            <span>Tổng số: <strong>{filteredList.length} thiết bị</strong></span>
-            <span>·</span>
-            <span>Ngày kết xuất: <strong>{new Date().toLocaleDateString('vi-VN')}</strong></span>
-          </div>
-        </div>
-
-        {/* BẢNG DỮ LIỆU TỔNG HỢP CHUẨN FORM */}
-        <div className="space-y-6">
-          {filteredList.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 border border-dashed border-slate-300 rounded-xl space-y-2">
-              <AlertTriangle className="w-8 h-8 mx-auto text-amber-500" />
-              <p className="font-semibold text-sm">Không tìm thấy thiết bị nào khớp với bộ lọc báo cáo</p>
-              <p className="text-xs text-slate-400">Vui lòng điều chỉnh lại từ khóa hoặc xóa bớt tiêu chí lọc</p>
+      ) : (
+        /* CASE 2: CONTINUOUS FLOW MODE */
+        <div className="report-print-container bg-white border border-slate-300 rounded-2xl shadow-sm p-6 sm:p-10 text-black font-sans">
+          
+          {/* TIÊU NGỮ & CƠ QUAN */}
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-black report-header-banner">
+            <div className="text-center sm:text-left text-xs uppercase leading-relaxed font-bold">
+              <p className="text-[11px] font-medium text-slate-700">TỔNG CÔNG TY QUẢN LÝ BAY VIỆT NAM</p>
+              <p className="text-xs font-bold text-black">CÔNG TY QUẢN LÝ BAY MIỀN NAM</p>
+              <p className="text-[11px] text-slate-800 border-b border-black inline-block pb-0.5">TRUNG TÂM BẢO ĐẢM KỸ THUẬT</p>
+              <p className="text-[10px] normal-case text-slate-600 font-mono mt-1">Số: ... /BC-BĐKT-CNS</p>
             </div>
-          ) : (
-            groupedData.map((group, gIdx) => (
+
+            <div className="text-center text-xs leading-relaxed">
+              <p className="font-bold uppercase text-xs">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+              <p className="font-bold border-b border-black inline-block pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
+              <p className="italic text-[11px] mt-2 text-slate-700">
+                TP. Hồ Chí Minh, {todayStr}
+              </p>
+            </div>
+          </div>
+
+          {/* REPORT TITLE BANNER */}
+          <div className="text-center py-6 space-y-1.5 report-header-banner">
+            <h1 className="text-base sm:text-xl font-bold uppercase tracking-wide text-black">
+              BÁO CÁO TỔNG HỢP THEO DÕI SỔ LÝ LỊCH TRANG THIẾT BỊ CNS
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-800 italic">
+              (Bảng kê hiện trạng kỹ thuật, linh kiện, kiểm tra bảo dưỡng và giấy phép khai thác)
+            </p>
+            <div className="flex items-center justify-center gap-3 text-xs text-slate-600 font-mono pt-1">
+              <span>Phạm vi: <strong>{stationFilter === 'ALL' ? 'Toàn bộ các Đài trạm' : `Đài trạm ${stationFilter}`}</strong></span>
+              <span>·</span>
+              <span>Tổng số: <strong>{filteredList.length} thiết bị</strong></span>
+              <span>·</span>
+              <span>Ngày kết xuất: <strong>{new Date().toLocaleDateString('vi-VN')}</strong></span>
+            </div>
+          </div>
+
+          {/* CONTINUOUS TABLE */}
+          <div className="space-y-6">
+            {groupedData.map((group) => (
               <div key={group.groupName} className="space-y-2">
                 {groupBy !== 'none' && (
-                  <div className="bg-slate-100 border border-slate-300 px-3.5 py-1.5 rounded-lg flex items-center justify-between text-xs font-bold text-slate-900">
+                  <div className="bg-slate-100 border border-slate-300 px-3.5 py-1.5 rounded-lg flex items-center justify-between text-xs font-bold text-slate-900 break-inside-avoid">
                     <span className="uppercase tracking-wide flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                       {group.groupName}
@@ -431,196 +890,21 @@ export function ConsolidatedReportView({
                 )}
 
                 <div className="overflow-x-auto border border-black rounded-lg">
-                  <table className="w-full text-[11px] text-left border-collapse border border-black">
-                    <thead className="bg-slate-100 text-black uppercase font-bold text-[10px] border-b border-black">
-                      <tr>
-                        <th className="border border-black p-2 text-center w-8">STT</th>
-                        <th className="border border-black p-2 min-w-[150px]">Tên Thiết Bị / Chủng Loại</th>
-                        <th className="border border-black p-2 min-w-[120px]">Ký Hiệu / Model & Serial</th>
-                        <th className="border border-black p-2 min-w-[100px]">Mã TS / Số Sổ</th>
-                        <th className="border border-black p-2 min-w-[110px]">Hãng & Nước SX / Năm</th>
-                        <th className="border border-black p-2 min-w-[120px]">Đài Trạm & Vị Trí</th>
-                        <th className="border border-black p-2 min-w-[100px]">Tần Số / Tham Số</th>
-                        <th className="border border-black p-2 text-center min-w-[95px]">Trạng Thái</th>
-                        <th className="border border-black p-2 text-center w-12">Số LK</th>
-                        <th className="border border-black p-2 min-w-[110px]">Bảo Dưỡng Gần Nhất</th>
-                        <th className="border border-black p-2 min-w-[130px]">Giấy Phép VTĐ & Khai Thác</th>
-                        <th className="border border-black p-2 min-w-[140px]">Kỹ Sư & Ghi Chú Kỹ Thuật</th>
-                      </tr>
-                    </thead>
+                  <table className="w-full text-left border-collapse border border-black">
+                    {renderTableHeader()}
                     <tbody className="divide-y divide-black/30">
-                      {group.items.map((eq, idx) => {
-                        const latestMaint = eq.maintenance && eq.maintenance.length > 0
-                          ? eq.maintenance[eq.maintenance.length - 1]
-                          : null;
-                        const freqLic = eq.licenseFrequency && eq.licenseFrequency.length > 0
-                          ? eq.licenseFrequency[0]
-                          : null;
-                        const operLic = eq.licenseOperation && eq.licenseOperation.length > 0
-                          ? eq.licenseOperation[0]
-                          : null;
-
-                        return (
-                          <tr 
-                            key={eq.id}
-                            onClick={() => {
-                              onSelectEquipment(eq.id);
-                              onSwitchToDossier();
-                            }}
-                            className="hover:bg-blue-50/50 transition cursor-pointer group"
-                            title="Bấm để xem chi tiết hồ sơ thiết bị này"
-                          >
-                            <td className="border border-black p-2 text-center font-mono font-medium">
-                              {idx + 1}
-                            </td>
-
-                            <td className="border border-black p-2">
-                              <div className="font-bold text-slate-900 group-hover:text-blue-700 transition">
-                                {eq.general.name}
-                              </div>
-                              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                                Loại: <span className="font-semibold text-slate-700">{eq.general.category}</span>
-                              </div>
-                            </td>
-
-                            <td className="border border-black p-2 font-mono">
-                              <div className="font-bold text-slate-800">{eq.general.model}</div>
-                              <div className="text-[10px] text-blue-900 font-bold mt-0.5">
-                                SN: {eq.general.serial}
-                              </div>
-                            </td>
-
-                            <td className="border border-black p-2 font-mono text-[10px]">
-                              <div>TS: <strong className="text-slate-900">{eq.general.assetNo || '---'}</strong></div>
-                              {eq.general.bookletNo && (
-                                <div className="text-slate-600">Sổ: {eq.general.bookletNo}</div>
-                              )}
-                            </td>
-
-                            <td className="border border-black p-2 text-[10px]">
-                              <div className="font-semibold text-slate-800">{eq.general.manufacturer}</div>
-                              <div className="text-slate-600">{eq.general.origin} ({eq.general.yearMade})</div>
-                            </td>
-
-                            <td className="border border-black p-2">
-                              <div className="font-bold text-blue-900">{eq.org.stationName || 'AACC HCM'}</div>
-                              <div className="text-[10px] text-slate-600 line-clamp-1">{eq.org.location}</div>
-                            </td>
-
-                            <td className="border border-black p-2 font-mono text-[10px]">
-                              <div className="font-bold text-blue-800">{eq.spec?.channelFreq || '---'}</div>
-                              {eq.spec?.power && (
-                                <div className="text-slate-600">P: {eq.spec.power}</div>
-                              )}
-                            </td>
-
-                            <td className="border border-black p-2 text-center">
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                eq.general.status === 'Đang khai thác' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                eq.general.status === 'Đang bảo dưỡng' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                                eq.general.status === 'Chờ sửa chữa' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                'bg-slate-100 text-slate-800 border border-slate-300'
-                              }`}>
-                                {eq.general.status}
-                              </span>
-                            </td>
-
-                            <td className="border border-black p-2 text-center font-mono font-bold">
-                              {eq.components?.length || 0}
-                            </td>
-
-                            <td className="border border-black p-2 text-[10px]">
-                              {latestMaint ? (
-                                <div>
-                                  <span className="font-mono font-bold text-slate-900">{latestMaint.date}</span>
-                                  <div className="text-emerald-700 font-semibold">{latestMaint.result}</div>
-                                </div>
-                              ) : (
-                                <span className="text-slate-400 italic">Chưa ghi nhận</span>
-                              )}
-                            </td>
-
-                            <td className="border border-black p-2 text-[10px] font-mono">
-                              {freqLic ? (
-                                <div>
-                                  VTĐ: <strong className="text-slate-900">{freqLic.no}</strong>
-                                  <span className="block text-slate-500 text-[9px]">Hạn: {freqLic.expireDate}</span>
-                                </div>
-                              ) : null}
-                              {operLic ? (
-                                <div className="mt-1">
-                                  KT: <strong className="text-slate-900">{operLic.no}</strong>
-                                  <span className="block text-slate-500 text-[9px]">Hạn: {operLic.expireDate}</span>
-                                </div>
-                              ) : null}
-                              {!freqLic && !operLic && (
-                                <span className="text-slate-400 italic">Theo giấy phép đài</span>
-                              )}
-                            </td>
-
-                            <td className="border border-black p-2 text-[10px]">
-                              <div className="font-bold text-blue-900">{eq.org.primaryEngineer}</div>
-                              {(eq.technicalNotes || eq.spec?.technicalNotes) ? (
-                                <div className="text-slate-700 italic line-clamp-2 mt-0.5 bg-slate-50 p-1 rounded border border-slate-200">
-                                  {eq.technicalNotes || eq.spec?.technicalNotes}
-                                </div>
-                              ) : (
-                                <span className="text-slate-400 italic">---</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {group.items.map((eq, idx) => renderTableRow(eq, idx))}
                     </tbody>
                   </table>
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
+
+          {/* SIGNATURE BLOCK */}
+          {renderSignatureBlock()}
         </div>
-
-        {/* TỔNG KẾT & CHỮ KÝ PHÊ DUYỆT CHUẨN FORM HÀNH CHÍNH (A4 SIGNATURE BLOCK) */}
-        <div className="pt-8 mt-6 border-t border-black space-y-6">
-          <div className="text-xs leading-relaxed space-y-1">
-            <p><strong>* Ghi chú và khuyến nghị của bộ phận kỹ thuật:</strong></p>
-            <p className="italic text-slate-700">
-              1. Báo cáo tổng hợp số liệu kỹ thuật, tình trạng vận hành và nhật ký bảo dưỡng được trích xuất trực tiếp từ Hệ thống Sổ lý lịch thiết bị CNS điện tử - VATM.
-            </p>
-            <p className="italic text-slate-700">
-              2. Các thiết bị đang trong trạng thái "Đang bảo dưỡng" hoặc "Chờ sửa chữa" phải được tổ chức kỹ thuật trực ban theo dõi sát sao, tuân thủ đúng quy trình an toàn bảo đảm hoạt động bay.
-            </p>
-          </div>
-
-          {/* CHỮ KÝ 3 BÊN CHUẨN MỰC */}
-          <div className="grid grid-cols-3 gap-4 text-center text-xs pt-4">
-            <div className="space-y-1">
-              <p className="font-bold uppercase">NGƯỜI LẬP BÁO CÁO</p>
-              <p className="text-[11px] italic text-slate-600">(Ký, ghi rõ họ tên)</p>
-              <div className="h-20"></div>
-              <p className="font-bold text-slate-800">KS. Trực ban Kỹ thuật CNS</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="font-bold uppercase">ĐỘI TRƯỞNG / TRƯỞNG ĐÀI TRẠM</p>
-              <p className="text-[11px] italic text-slate-600">(Ký, ghi rõ họ tên)</p>
-              <div className="h-20"></div>
-              <p className="font-bold text-slate-800">KS. Phụ trách Đài Trạm</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="font-bold uppercase">GIÁM ĐỐC TRUNG TÂM / PHÊ DUYỆT</p>
-              <p className="text-[11px] italic text-slate-600">(Ký tên, đóng dấu)</p>
-              <div className="h-20"></div>
-              <p className="font-bold text-slate-800">Lãnh Đạo Trung Tâm BĐKT</p>
-            </div>
-          </div>
-
-          <div className="text-center text-[10px] text-slate-400 font-mono pt-4 border-t border-slate-200">
-            HỆ THỐNG QUẢN LÝ SỔ LÝ LỊCH THIẾT BỊ CNS · CÔNG TY QUẢN LÝ BAY MIỀN NAM (VATM)
-          </div>
-        </div>
-
-      </div>
+      )}
 
     </div>
   );
