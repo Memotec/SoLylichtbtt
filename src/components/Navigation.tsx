@@ -56,15 +56,28 @@ export function Navigation({
 
   useEffect(() => {
     const update = () => {
-      const now = new Date();
-      const vn = now.toLocaleTimeString('vi-VN', { hour12: false });
-      const utcHours = String(now.getUTCHours()).padStart(2, '0');
-      const utcMins = String(now.getUTCMinutes()).padStart(2, '0');
-      const utcSecs = String(now.getUTCSeconds()).padStart(2, '0');
-      setTime({
-        vn,
-        utc: `${utcHours}:${utcMins}:${utcSecs}Z`
-      });
+      try {
+        const now = new Date();
+        
+        // Purely mathematical UTC extraction to guarantee 100% reliability
+        const utcHours = String(now.getUTCHours()).padStart(2, '0');
+        const utcMins = String(now.getUTCMinutes()).padStart(2, '0');
+        const utcSecs = String(now.getUTCSeconds()).padStart(2, '0');
+        
+        // Purely mathematical VN (UTC+7) calculation independent of system/browser locale
+        const utcTimeMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const vnTime = new Date(utcTimeMs + (3600000 * 7));
+        const vnHours = String(vnTime.getHours()).padStart(2, '0');
+        const vnMins = String(vnTime.getMinutes()).padStart(2, '0');
+        const vnSecs = String(vnTime.getSeconds()).padStart(2, '0');
+
+        setTime({
+          vn: `${vnHours}:${vnMins}:${vnSecs}`,
+          utc: `${utcHours}:${utcMins}:${utcSecs}Z`
+        });
+      } catch (err) {
+        console.error('Error updating real-time aviation clock:', err);
+      }
     };
     update();
     const interval = setInterval(update, 1000);

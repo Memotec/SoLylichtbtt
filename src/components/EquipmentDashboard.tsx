@@ -107,6 +107,8 @@ export function EquipmentDashboard({
     category: 'VHF/UHF' as Equipment['general']['category'],
     model: '',
     serial: '',
+    assetNo: '',
+    priority: 'Thiết bị nhóm 1',
     manufacturer: '',
     yearMade: '2023',
     origin: 'CHLB Đức',
@@ -441,12 +443,12 @@ export function EquipmentDashboard({
         model: newEqForm.model || 'Model Chuẩn',
         manufacturer: newEqForm.manufacturer || 'Chưa rõ',
         serial: newEqForm.serial || 'SN-' + Date.now().toString().slice(-6),
-        assetNo: 'TSCD-' + Date.now().toString().slice(-4),
+        assetNo: newEqForm.assetNo || 'TSCD-' + Date.now().toString().slice(-4),
         yearMade: newEqForm.yearMade,
         origin: newEqForm.origin,
         commissioned: newEqForm.commissioned,
         status: 'Đang khai thác',
-        priority: 'Hệ thống chính (Level 1)'
+        priority: newEqForm.priority
       },
       org: {
         companyName: 'CÔNG TY QUẢN LÝ BAY MIỀN NAM',
@@ -1014,6 +1016,17 @@ export function EquipmentDashboard({
                       </div>
 
                       <div>
+                        <label className="block text-slate-700 font-semibold mb-1">Mã tài sản (Mã TS):</label>
+                        <input
+                          type="text"
+                          value={currentEquipment.general.assetNo || ''}
+                          onChange={(e) => handleFieldChange('general', 'assetNo', e.target.value)}
+                          placeholder="VD: TSCD-VHF-01"
+                          className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2 text-slate-800 font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
                         <label className="block text-slate-700 font-semibold mb-1">Hãng sản xuất:</label>
                         <input
                           type="text"
@@ -1075,9 +1088,10 @@ export function EquipmentDashboard({
                           onChange={(e) => handleFieldChange('general', 'priority', e.target.value)}
                           className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3.5 py-2 text-slate-800 font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
                         >
-                          <option value="Hệ thống chính (Level 1)">Hệ thống chính (Level 1)</option>
-                          <option value="Hệ thống phụ (Level 2)">Hệ thống phụ (Level 2)</option>
-                          <option value="Dự phòng (Level 3)">Dự phòng (Level 3)</option>
+                          <option value="Thiết bị nhóm 1">Thiết bị nhóm 1</option>
+                          <option value="Thiết bị nhóm 2">Thiết bị nhóm 2</option>
+                          <option value="Thiết bị nhóm 3">Thiết bị nhóm 3</option>
+                          <option value="Thiết bị khác">Thiết bị khác</option>
                         </select>
                       </div>
                     </div>
@@ -1857,6 +1871,31 @@ export function EquipmentDashboard({
                     placeholder="VD: SN-TH-2023-889"
                     className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3 py-2 text-blue-700 font-mono font-bold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Mã tài sản (Mã TS):</label>
+                  <input
+                    type="text"
+                    value={newEqForm.assetNo}
+                    onChange={(e) => setNewEqForm({...newEqForm, assetNo: e.target.value})}
+                    placeholder="VD: TSCD-VHF-01"
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3 py-2 text-slate-800 font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Cấp độ ưu tiên:</label>
+                  <select
+                    value={newEqForm.priority}
+                    onChange={(e) => setNewEqForm({...newEqForm, priority: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                  >
+                    <option value="Thiết bị nhóm 1">Thiết bị nhóm 1</option>
+                    <option value="Thiết bị nhóm 2">Thiết bị nhóm 2</option>
+                    <option value="Thiết bị nhóm 3">Thiết bị nhóm 3</option>
+                    <option value="Thiết bị khác">Thiết bị khác</option>
+                  </select>
                 </div>
 
                 <div>

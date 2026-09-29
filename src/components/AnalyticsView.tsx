@@ -24,6 +24,14 @@ interface AnalyticsViewProps {
   onOpenPrintModal: (equipment?: Equipment) => void;
 }
 
+function calcPct(num: number, total: number, decimals: number = 0): string {
+  if (!total || total <= 0 || !num || num <= 0 || Number.isNaN(num) || Number.isNaN(total)) {
+    return '0';
+  }
+  const result = (num / total) * 100;
+  return Number.isNaN(result) ? '0' : result.toFixed(decimals);
+}
+
 export function AnalyticsView({
   equipments,
   onSelectEquipment,
@@ -32,14 +40,16 @@ export function AnalyticsView({
 }: AnalyticsViewProps) {
   // Analytical Calculations
   const stats = useMemo(() => {
-    const total = equipments.length;
-    const active = equipments.filter(e => e.general.status === 'Đang khai thác').length;
-    const maint = equipments.filter(e => e.general.status === 'Đang bảo dưỡng').length;
-    const repair = equipments.filter(e => e.general.status === 'Chờ sửa chữa').length;
-    const standby = equipments.filter(e => e.general.status === 'Dự phòng nóng').length;
+    const total = Number(equipments?.length) || 0;
+    const active = equipments?.filter(e => e?.general?.status === 'Đang khai thác').length || 0;
+    const maint = equipments?.filter(e => e?.general?.status === 'Đang bảo dưỡng').length || 0;
+    const repair = equipments?.filter(e => e?.general?.status === 'Chờ sửa chữa').length || 0;
+    const standby = equipments?.filter(e => e?.general?.status === 'Dự phòng nóng').length || 0;
 
     // Availability Rate (% Uptime)
-    const availabilityRate = total > 0 ? ((active + standby) / total) * 100 : 100;
+    const rawRate = total > 0 ? ((active + standby) / total) * 100 : 100;
+    const availabilityRateNum = Number.isNaN(rawRate) ? 100 : rawRate;
+    const availabilityRate = availabilityRateNum.toFixed(2);
 
     // Category Breakdown
     const categories: Record<string, number> = {};
@@ -111,7 +121,7 @@ export function AnalyticsView({
       maint,
       repair,
       standby,
-      availabilityRate: availabilityRate.toFixed(2),
+      availabilityRate,
       categories,
       totalComps,
       goodComps,
@@ -248,7 +258,7 @@ export function AnalyticsView({
               {Object.entries(stats.categories).map(([catName, count]) => {
                 const numCount = Number(count) || 0;
                 const totalCount = Number(stats.total) || 1;
-                const pct = ((numCount / totalCount) * 100).toFixed(0);
+                const pct = calcPct(numCount, totalCount, 0);
                 return (
                   <div key={catName} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
@@ -278,25 +288,25 @@ export function AnalyticsView({
               <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
                 <span className="text-[11px] font-semibold text-emerald-800">Tốt & Đạt Chuẩn</span>
                 <p className="text-xl font-bold font-mono text-emerald-700 mt-1">{stats.goodComps}</p>
-                <span className="text-[10px] text-emerald-600">{((stats.goodComps / Math.max(1, stats.totalComps)) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-emerald-600">{calcPct(stats.goodComps, stats.totalComps)}%</span>
               </div>
 
               <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl">
                 <span className="text-[11px] font-semibold text-amber-800">Cần Theo Dõi</span>
                 <p className="text-xl font-bold font-mono text-amber-700 mt-1">{stats.warnComps}</p>
-                <span className="text-[10px] text-amber-600">{((stats.warnComps / Math.max(1, stats.totalComps)) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-amber-600">{calcPct(stats.warnComps, stats.totalComps)}%</span>
               </div>
 
               <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl">
                 <span className="text-[11px] font-semibold text-sky-800">Dự Phòng Kho</span>
                 <p className="text-xl font-bold font-mono text-sky-700 mt-1">{stats.spareComps}</p>
-                <span className="text-[10px] text-sky-600">{((stats.spareComps / Math.max(1, stats.totalComps)) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-sky-600">{calcPct(stats.spareComps, stats.totalComps)}%</span>
               </div>
 
               <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl">
                 <span className="text-[11px] font-semibold text-rose-800">Hỏng / Sửa Chữa</span>
                 <p className="text-xl font-bold font-mono text-rose-700 mt-1">{stats.faultComps}</p>
-                <span className="text-[10px] text-rose-600">{((stats.faultComps / Math.max(1, stats.totalComps)) * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-rose-600">{calcPct(stats.faultComps, stats.totalComps)}%</span>
               </div>
             </div>
           </div>

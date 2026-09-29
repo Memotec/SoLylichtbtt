@@ -16,9 +16,11 @@ export function generateAppsScriptCodeGs(): string {
  */
 
 function doGet(e) {
+  var passedId = (e && e.parameter) ? (e.parameter.spreadsheetId || '') : '';
+
   // 1. Trả về JSON nếu gọi API (?format=json hoặc ?api=1)
   if (e && e.parameter && (e.parameter.format === 'json' || e.parameter.api === '1')) {
-    var data = getEquipmentsFromSheet();
+    var data = getEquipmentsFromSheet(passedId);
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
       count: data.length,
@@ -27,32 +29,41 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 2. Render giao diện Web App hoàn chỉnh từ file Index.html
+  // 2. Render giao diện Web App hoàn chỉnh từ file Index.html hoặc index.html
+  var template = null;
   try {
-    return HtmlService.createHtmlOutputFromFile('Index')
+    template = HtmlService.createTemplateFromFile('Index');
+  } catch (e1) {
+    try {
+      template = HtmlService.createTemplateFromFile('index');
+    } catch (e2) {}
+  }
+
+  if (template) {
+    template.queryEq = (e && e.parameter) ? (e.parameter.eq || e.parameter.equipmentId || e.parameter.id || '') : '';
+    template.queryAction = (e && e.parameter) ? (e.parameter.action || e.parameter.view || '') : '';
+    return template.evaluate()
       .setTitle('Sổ Quản Lý Lý Lịch Thiết Bị CNS - VATM')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-  } catch (err) {
-    return HtmlService.createHtmlOutput(
-      '<div style="font-family:system-ui,-apple-system,sans-serif; padding:32px; max-width:640px; margin:40px auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); line-height:1.6;">' +
-      '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
-        '<span style="background:#fee2e2; color:#ef4444; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">!</span>' +
-        '<h2 style="color:#0f172a; margin:0; font-size:18px; font-weight:bold;">Chưa tìm thấy file HTML có tên "Index"</h2>' +
-      '</div>' +
-      '<p style="color:#475569; font-size:14px;">Để Web App hiển thị đầy đủ giao diện, bạn chỉ cần thực hiện 2 bước đơn giản trong dự án Apps Script này:</p>' +
-      '<ol style="color:#334155; font-size:13px; padding-left:20px; line-height:1.8;">' +
-        '<li>Nhấp vào nút <strong>+</strong> (Thêm tệp) bên cạnh cột <strong>Tệp</strong> bên trái > Chọn <strong>HTML</strong>.</li>' +
-        '<li>Đặt tên tệp chính xác là <strong>Index</strong> (không cần gõ thêm đuôi .html).</li>' +
-        '<li>Dán toàn bộ mã nguồn của file <strong>Index.html</strong> vào và nhấn <strong>Lưu</strong> (Ctrl+S).</li>' +
-        '<li>Bấm <strong>Triển khai (Deploy)</strong> > <strong>Quản lý bản triển khai (Manage deployments)</strong> > Chọn <strong>Phiên bản mới</strong> > <strong>Lưu</strong>.</li>' +
-      '</ol>' +
-      '<div style="margin-top:20px; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #cbd5e1; font-size:11px; color:#64748b; font-family:monospace;">' +
-        'Mã lỗi: ' + err.toString() +
-      '</div>' +
-      '</div>'
-    ).setTitle('Hướng Dẫn Cài Đặt Web App VATM');
   }
+
+  return HtmlService.createHtmlOutput(
+    '<div style="font-family:system-ui,-apple-system,sans-serif; padding:32px; max-width:680px; margin:40px auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.1); line-height:1.6;">' +
+    '<div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">' +
+      '<span style="background:#fee2e2; color:#ef4444; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px;">!</span>' +
+      '<h2 style="color:#0f172a; margin:0; font-size:18px; font-weight:bold;">Chưa tìm thấy tệp HTML có tên "Index" trong Apps Script</h2>' +
+    '</div>' +
+    '<p style="color:#475569; font-size:14px; font-weight:bold;">Hướng dẫn thiết lập chỉ trong 3 bước:</p>' +
+    '<ol style="color:#334155; font-size:13px; padding-left:20px; line-height:1.8;">' +
+      '<li>Trong trình biên tập Google Apps Script, nhấn nút <strong>+</strong> bên cạnh danh mục <strong>Tệp (Files)</strong> > Chọn <strong>HTML</strong>.</li>' +
+      '<li>Nhập tên tệp chính xác là <strong>Index</strong> (không gõ đuôi .html).</li>' +
+      '<li>Dán toàn bộ mã nguồn tệp <strong>Index.html</strong> vào và nhấn <strong>Lưu (Ctrl+S)</strong>.</li>' +
+      '<li>Bấm <strong>Triển khai (Deploy)</strong> > <strong>Quản lý bản triển khai (Manage deployments)</strong> > Biểu tượng ✏️ <strong>Sửa</strong> > Chọn <strong>Phiên bản mới (New version)</strong> > Bấm <strong>Triển khai</strong>.</li>' +
+      '<li>Lưu ý quan trọng: Cài đặt <strong>"Thực thi dưới dạng" = Tôi (Me)</strong> và <strong>"Ai có quyền truy cập" = Bất kỳ ai (Anyone)</strong>.</li>' +
+    '</ol>' +
+    '</div>'
+  ).setTitle('Hướng Dẫn Cài Đặt Web App VATM');
 }
 
 function doPost(e) {
@@ -61,8 +72,9 @@ function doPost(e) {
     if (e && e.postData && e.postData.contents) {
       payload = JSON.parse(e.postData.contents);
     }
+    var passedId = payload.spreadsheetId || "";
     var equipments = payload.equipments || [];
-    saveAllEquipmentsToSheet(equipments);
+    saveAllEquipmentsToSheet(equipments, passedId);
 
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
@@ -78,57 +90,185 @@ function doPost(e) {
   }
 }
 
-function getEquipmentsFromSheet() {
+function getActiveOrBoundSheet(passedId) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+    var prop = PropertiesService.getScriptProperties();
+    var savedId = passedId || prop.getProperty("SPREADSHEET_ID");
+    if (savedId) {
+      try {
+        var opened = SpreadsheetApp.openById(savedId);
+        if (opened) {
+          if (passedId) {
+            prop.setProperty("SPREADSHEET_ID", passedId);
+          }
+          return opened;
+        }
+      } catch(e) {}
+    }
+    var newSs = SpreadsheetApp.create("Sổ Lý Lịch Thiết Bị CNS - VATM");
+    prop.setProperty("SPREADSHEET_ID", newSs.getId());
+    return newSs;
+  } catch (e) {
+    Logger.log("Error getActiveOrBoundSheet: " + e);
+    return null;
+  }
+}
+
+function getDefaultSampleEquipments() {
+  return [
+    {
+      id: "EQ-CNS-01",
+      general: { name: "Máy phát VHF T6T 50W", category: "VHF", model: "T6T MK6", serial: "SN-VHF-001", assetNo: "TSCD-2022-01", bookletNo: "SLL-01/2022", manufacturer: "Park Air Systems", yearMade: "2021", commissioned: "2022-01-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Đài KSKL Tân Sơn Nhất", stationName: "AACC HCM", primaryEngineer: "KS. Nguyễn Văn A" },
+      spec: { power: "50 Watt", channelFreq: "127.500 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.2", interface: "Ethernet / E1 / RS232", coverage: "150 NM", mgmtIp: "192.168.1.101", text: "Máy phát VHF băng không địa đường dài AACC HCM" },
+      components: [{ id: "C1", name: "Khối PA 50W", model: "PA-50W", serial: "PA-991" }],
+      maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-02",
+      general: { name: "Máy thu VHF T6R Dual Channel", category: "VHF", model: "T6R MK6", serial: "SN-VHF-002", assetNo: "TSCD-2022-02", bookletNo: "SLL-02/2022", manufacturer: "Park Air Systems", yearMade: "2021", commissioned: "2022-01-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Trần Văn B" },
+      spec: { power: "N/A", channelFreq: "120.100 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.1", interface: "Ethernet / IP", coverage: "180 NM", mgmtIp: "192.168.1.102", text: "Máy thu VHF đa kênh ATCC HCM" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-03",
+      general: { name: "Hệ thống chuyển mạch thoại VCCS VCS3020X", category: "VCCS", model: "VCS3020X", serial: "SN-VCCS-881", assetNo: "TSCD-2020-88", bookletNo: "SLL-03/2020", manufacturer: "Frequentis", yearMade: "2020", commissioned: "2020-05-10", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "AACC HCM", stationName: "AACC HCM", primaryEngineer: "KS. Lê Văn C" },
+      spec: { power: "1200W", channelFreq: "IP / VoIP ED-137", powerSupply: "Dual 48V DC", mgmtIp: "10.10.1.1", text: "Hệ thống chuyển mạch thoại VCCS AACC HCM" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-04",
+      general: { name: "Hệ thống D-VOR/DME Selex ES", category: "VHF", model: "D-VOR 1150A", serial: "SN-DVOR-09", assetNo: "TSCD-2018-09", bookletNo: "SLL-04/2018", manufacturer: "Selex ES", yearMade: "2018", commissioned: "2018-11-20", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ old", stationName: "BQ old", primaryEngineer: "KS. Phạm Văn D" },
+      spec: { power: "100W Peak", channelFreq: "112.500 MHz", powerSupply: "220V AC / Solar", mgmtIp: "172.16.2.5", text: "Hệ thống dẫn đường D-VOR/DME BQ old" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-05",
+      general: { name: "Hệ thống dẫn đường hạ cánh ILS/DME Normaarc", category: "VHF", model: "Normaarc 7000", serial: "SN-ILS-701", assetNo: "TSCD-2023-77", bookletNo: "SLL-05/2023", manufacturer: "TELERAD", yearMade: "2023", commissioned: "2023-03-01", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ New", stationName: "BQ New", primaryEngineer: "KS. Hoang Văn E" },
+      spec: { power: "15W / 100W", channelFreq: "109.900 MHz", powerSupply: "220V AC UPS", mgmtIp: "10.20.1.1", text: "Hệ thống ILS/DME BQ New" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-06",
+      general: { name: "Hệ thống Giám sát Radar Thứ cấp SSR Mode S", category: "VHF", model: "SSR Mode S", serial: "SN-RADAR-202", assetNo: "TSCD-2019-12", bookletNo: "SLL-06/2019", manufacturer: "Indra", yearMade: "2019", commissioned: "2019-08-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Vũ Văn F" },
+      spec: { power: "2500W Peak", channelFreq: "1030 / 1090 MHz", powerSupply: "3-Phase 380V", mgmtIp: "10.30.1.5", text: "Radar giám sát Mode S ATCC HCM" },
+      components: [], maintenance: [], repair: []
+    }
+  ];
+}
+
+function buildRowFromEquipment(eq) {
+  var g = eq.general || {};
+  var o = eq.org || {};
+  var s = eq.spec || {};
+  return [
+    eq.id || ("EQ-" + Date.now()),
+    g.name || "",
+    g.category || "",
+    g.model || "",
+    g.serial || "",
+    s.channelFreq || "",
+    g.assetNo || "",
+    g.bookletNo || "",
+    g.manufacturer || "",
+    g.yearMade || "",
+    g.commissioned || "",
+    g.status || "",
+    g.priority || "",
+    o.unit || "",
+    o.stationName || o.location || "AACC HCM",
+    o.primaryEngineer || "",
+    s.power || "",
+    s.powerSupply || "",
+    s.vswr || "",
+    s.interface || "",
+    s.coverage || "",
+    s.mgmtIp || s.text || "",
+    JSON.stringify(eq)
+  ];
+}
+
+function parseEquipmentFromRow(row, index) {
+  if (!row || (!row[0] && !row[1])) return null;
+
+  if (row[22]) {
+    try {
+      var jsonStr = String(row[22]).trim();
+      if (jsonStr.indexOf('{') === 0) {
+        var parsed = JSON.parse(jsonStr);
+        if (parsed && parsed.id && parsed.general) {
+          return parsed;
+        }
+      }
+    } catch(e) {}
+  }
+
+  return {
+    id: String(row[0] || ("EQ-" + Date.now() + "-" + index)),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    general: {
+      name: String(row[1] || "Thiết bị CNS"),
+      category: String(row[2] || "VHF"),
+      model: String(row[3] || ""),
+      serial: String(row[4] || ""),
+      assetNo: String(row[6] || ""),
+      bookletNo: String(row[7] || ""),
+      manufacturer: String(row[8] || ""),
+      yearMade: String(row[9] || ""),
+      origin: "Việt Nam",
+      commissioned: String(row[10] || ""),
+      status: String(row[11] || "Đang khai thác"),
+      priority: String(row[12] || "Hệ thống chính (Level 1)")
+    },
+    org: {
+      companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM",
+      unit: String(row[13] || "TRUNG TÂM BẢO ĐẢM KỸ THUẬT"),
+      location: String(row[14] || "AACC HCM"),
+      stationName: String(row[14] || "AACC HCM"),
+      primaryEngineer: String(row[15] || "Kỹ sư trực ban"),
+      supervisor: "KS. Trưởng đài"
+    },
+    spec: {
+      power: String(row[16] || ""),
+      channelFreq: String(row[5] || ""),
+      powerSupply: String(row[17] || ""),
+      vswr: String(row[18] || ""),
+      interface: String(row[19] || ""),
+      coverage: String(row[20] || ""),
+      mgmtIp: String(row[21] || ""),
+      text: ""
+    },
+    components: [],
+    maintenance: [],
+    repair: []
+  };
+}
+
+function getEquipmentsFromSheet(passedId) {
+  try {
+    var ss = getActiveOrBoundSheet(passedId);
     if (!ss) return [];
     var sheet = ss.getSheetByName("Danh Mục Thiết Bị CNS") || ss.getSheets()[0];
     if (!sheet) return [];
     var data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return [];
+    if (data.length <= 1) {
+      var samples = getDefaultSampleEquipments();
+      saveAllEquipmentsToSheet(samples, passedId);
+      return samples;
+    }
 
     var list = [];
     for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      if (!row[0] && !row[1]) continue;
-      list.push({
-        id: String(row[0] || ("EQ-" + Date.now() + "-" + i)),
-        general: {
-          name: String(row[1] || "Thiết bị CNS"),
-          category: String(row[2] || "VHF/UHF"),
-          model: String(row[3] || ""),
-          serial: String(row[4] || ""),
-          assetNo: String(row[5] || ""),
-          bookletNo: String(row[6] || ""),
-          manufacturer: String(row[7] || ""),
-          yearMade: String(row[8] || ""),
-          origin: "Việt Nam",
-          commissioned: String(row[9] || ""),
-          status: String(row[10] || "Đang khai thác"),
-          priority: String(row[11] || "Hệ thống chính (Level 1)")
-        },
-        org: {
-          companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM",
-          unit: String(row[12] || "TRUNG TÂM BẢO ĐẢM KỸ THUẬT"),
-          location: String(row[13] || "Đài KSKL Tân Sơn Nhất"),
-          stationName: String(row[13] || "AACC HCM"),
-          primaryEngineer: String(row[14] || "Kỹ sư trực ban"),
-          supervisor: "KS. Trưởng đài"
-        },
-        spec: {
-          power: String(row[15] || ""),
-          channelFreq: String(row[4] || ""),
-          powerSupply: String(row[16] || ""),
-          vswr: String(row[17] || ""),
-          interface: String(row[18] || ""),
-          coverage: String(row[19] || ""),
-          mgmtIp: String(row[20] || ""),
-          text: String(row[21] || "")
-        },
-        components: [],
-        maintenance: [],
-        repair: []
-      });
+      var item = parseEquipmentFromRow(data[i], i);
+      if (item) list.push(item);
     }
     return list;
   } catch (err) {
@@ -137,18 +277,19 @@ function getEquipmentsFromSheet() {
   }
 }
 
-function saveAllEquipmentsToSheet(equipments) {
+function saveAllEquipmentsToSheet(equipments, passedId) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getActiveOrBoundSheet(passedId);
     if (!ss) return;
     var sheet = ss.getSheetByName("Danh Mục Thiết Bị CNS");
     if (!sheet) sheet = ss.insertSheet("Danh Mục Thiết Bị CNS", 0);
 
     var headers = [
       "Mã Thiết Bị (ID)", "Tên Thiết Bị", "Chủng Loại CNS", "Ký Hiệu / Model", "Số Serial (S/N)",
-      "Mã Tài Sản", "Số Sổ", "Hãng Sản Xuất", "Năm SX", "Ngày SD", "Trạng Thái", "Cấp Ưu Tiên",
+      "Tần Số Hoạt Động", "Mã Tài Sản", "Số Sổ", "Hãng Sản Xuất", "Năm SX", "Ngày SD", "Trạng Thái", "Cấp Ưu Tiên",
       "Đơn Vị Quản Lý", "Vị Trí Đài Trạm", "Kỹ Sư Phụ Trách",
-      "Công Suất Phát", "Nguồn Điện", "Hệ Số VSWR", "Giao Diện Kết Nối", "Tầm Phủ Sóng", "Địa Chỉ IP", "Mô Tả Thông Số Kỹ Thuật"
+      "Công Suất Phát", "Nguồn Điện", "Hệ Số VSWR", "Giao Diện Kết Nối", "Tầm Phủ Sóng", "Địa Chỉ IP",
+      "Dữ Liệu JSON Cấu Trúc (Linh Kiện & Bảo Dưỡng)"
     ];
 
     sheet.clearContents();
@@ -158,17 +299,7 @@ function saveAllEquipmentsToSheet(equipments) {
 
     var rows = [];
     for (var i = 0; i < equipments.length; i++) {
-      var eq = equipments[i];
-      var g = eq.general || {};
-      var o = eq.org || {};
-      var s = eq.spec || {};
-      rows.push([
-        eq.id || "", g.name || "", g.category || "", g.model || "", g.serial || "",
-        g.assetNo || "", g.bookletNo || "", g.manufacturer || "", g.yearMade || "",
-        g.commissioned || "", g.status || "", g.priority || "",
-        o.unit || "", o.stationName || o.location || "AACC HCM", o.primaryEngineer || "",
-        s.power || "", s.powerSupply || "", s.vswr || "", s.interface || "", s.coverage || "", s.mgmtIp || "", s.text || ""
-      ]);
+      rows.push(buildRowFromEquipment(equipments[i]));
     }
     if (rows.length > 0) {
       sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
@@ -180,20 +311,26 @@ function saveAllEquipmentsToSheet(equipments) {
 
 function saveEquipmentToSheet(eq) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) return { success: false };
+    var ss = getActiveOrBoundSheet();
+    if (!ss) return { success: false, error: "Khong tim thay Google Sheet" };
     var sheet = ss.getSheetByName("Danh Mục Thiết Bị CNS") || ss.getSheets()[0];
-    var g = eq.general || {};
-    var o = eq.org || {};
-    var s = eq.spec || {};
+    var rowValues = buildRowFromEquipment(eq);
 
-    sheet.appendRow([
-      eq.id || ("EQ-" + Date.now()), g.name || "", g.category || "", g.model || "", g.serial || "",
-      g.assetNo || "", g.bookletNo || "", g.manufacturer || "", g.yearMade || "",
-      g.commissioned || "", g.status || "", g.priority || "",
-      o.unit || "", o.stationName || o.location || "AACC HCM", o.primaryEngineer || "",
-      s.power || "", s.powerSupply || "", s.vswr || "", s.interface || "", s.coverage || "", s.mgmtIp || "", s.text || ""
-    ]);
+    var data = sheet.getDataRange().getValues();
+    var foundIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(eq.id).trim()) {
+        foundIndex = i + 1;
+        break;
+      }
+    }
+
+    if (foundIndex > 0) {
+      sheet.getRange(foundIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      sheet.appendRow(rowValues);
+    }
+
     return { success: true, id: eq.id };
   } catch (err) {
     Logger.log("Error saveEquipmentToSheet: " + err);
@@ -204,7 +341,66 @@ function saveEquipmentToSheet(eq) {
 }
 
 export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
-  const initialJson = JSON.stringify(equipmentsData || [], null, 2);
+  const defaultSampleData = [
+    {
+      id: "EQ-CNS-01",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Máy phát VHF T6T 50W", category: "VHF" as const, model: "T6T MK6", serial: "SN-VHF-001", assetNo: "TSCD-2022-01", bookletNo: "SLL-01/2022", manufacturer: "Park Air Systems", yearMade: "2021", origin: "Việt Nam", commissioned: "2022-01-15", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Đài KSKL Tân Sơn Nhất", stationName: "AACC HCM", primaryEngineer: "KS. Nguyễn Văn A", supervisor: "KS. Trưởng đài" },
+      spec: { power: "50 Watt", channelFreq: "127.500 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.2", interface: "Ethernet / E1 / RS232", coverage: "150 NM", mgmtIp: "192.168.1.101", text: "Máy phát VHF băng không địa đường dài AACC HCM" },
+      components: [{ id: "C1", name: "Khối PA 50W", model: "PA-50W", serial: "PA-991" }],
+      maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-02",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Máy thu VHF T6R Dual Channel", category: "VHF" as const, model: "T6R MK6", serial: "SN-VHF-002", assetNo: "TSCD-2022-02", bookletNo: "SLL-02/2022", manufacturer: "Park Air Systems", yearMade: "2021", origin: "Việt Nam", commissioned: "2022-01-15", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Trần Văn B", supervisor: "KS. Trưởng đài" },
+      spec: { power: "N/A", channelFreq: "120.100 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.1", interface: "Ethernet / IP", coverage: "180 NM", mgmtIp: "192.168.1.102", text: "Máy thu VHF đa kênh ATCC HCM" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-03",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Hệ thống chuyển mạch thoại VCCS VCS3020X", category: "VCCS" as const, model: "VCS3020X", serial: "SN-VCCS-881", assetNo: "TSCD-2020-88", bookletNo: "SLL-03/2020", manufacturer: "Frequentis", yearMade: "2020", origin: "Việt Nam", commissioned: "2020-05-10", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "AACC HCM", stationName: "AACC HCM", primaryEngineer: "KS. Lê Văn C", supervisor: "KS. Trưởng đài" },
+      spec: { power: "1200W", channelFreq: "IP / VoIP ED-137", powerSupply: "Dual 48V DC", mgmtIp: "10.10.1.1", text: "Hệ thống chuyển mạch thoại VCCS AACC HCM" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-04",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Hệ thống D-VOR/DME Selex ES", category: "VHF" as const, model: "D-VOR 1150A", serial: "SN-DVOR-09", assetNo: "TSCD-2018-09", bookletNo: "SLL-04/2018", manufacturer: "Selex ES", yearMade: "2018", origin: "Việt Nam", commissioned: "2018-11-20", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ old", stationName: "BQ old", primaryEngineer: "KS. Phạm Văn D", supervisor: "KS. Trưởng đài" },
+      spec: { power: "100W Peak", channelFreq: "112.500 MHz", powerSupply: "220V AC / Solar", mgmtIp: "172.16.2.5", text: "Hệ thống dẫn đường D-VOR/DME BQ old" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-05",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Hệ thống dẫn đường hạ cánh ILS/DME Normaarc", category: "VHF" as const, model: "Normaarc 7000", serial: "SN-ILS-701", assetNo: "TSCD-2023-77", bookletNo: "SLL-05/2023", manufacturer: "TELERAD", yearMade: "2023", origin: "Việt Nam", commissioned: "2023-03-01", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ New", stationName: "BQ New", primaryEngineer: "KS. Hoang Văn E", supervisor: "KS. Trưởng đài" },
+      spec: { power: "15W / 100W", channelFreq: "109.900 MHz", powerSupply: "220V AC UPS", mgmtIp: "10.20.1.1", text: "Hệ thống ILS/DME BQ New" },
+      components: [], maintenance: [], repair: []
+    },
+    {
+      id: "EQ-CNS-06",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      general: { name: "Hệ thống Giám sát Radar Thứ cấp SSR Mode S", category: "VHF" as const, model: "SSR Mode S", serial: "SN-RADAR-202", assetNo: "TSCD-2019-12", bookletNo: "SLL-06/2019", manufacturer: "Indra", yearMade: "2019", origin: "Việt Nam", commissioned: "2019-08-15", status: "Đang khai thác" as const, priority: "Hệ thống chính (Level 1)" as const },
+      org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Vũ Văn F", supervisor: "KS. Trưởng đài" },
+      spec: { power: "2500W Peak", channelFreq: "1030 / 1090 MHz", powerSupply: "3-Phase 380V", mgmtIp: "10.30.1.5", text: "Radar giám sát Mode S ATCC HCM" },
+      components: [], maintenance: [], repair: []
+    }
+  ];
+
+  const dataToUse = (equipmentsData && equipmentsData.length > 0) ? equipmentsData : defaultSampleData;
+  const initialJson = JSON.stringify(dataToUse, null, 2);
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -216,6 +412,11 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script>
+    var SERVER_QUERY_EQ = "<?= typeof queryEq !== 'undefined' ? queryEq : '' ?>";
+    var SERVER_QUERY_ACTION = "<?= typeof queryAction !== 'undefined' ? queryAction : '' ?>";
+  </script>
 
   <style>
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -363,6 +564,9 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
       </div>
 
       <div class="flex items-center gap-2">
+        <button onclick="openQrScannerModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Quét mã QR bằng camera hoặc tệp ảnh">
+          <i class="fa-solid fa-qrcode text-sm"></i><span>Quét Mã QR</span>
+        </button>
         <button onclick="openAddModal()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
           <i class="fa-solid fa-plus"></i><span>Thêm Thiết Bị</span>
         </button>
@@ -582,6 +786,50 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
     </div>
   </div>
 
+  <!-- MODAL: QUÉT MÃ QR CODE TRỰC TIẾP TRÊN WEB APP -->
+  <div id="qr-scanner-modal" class="fixed inset-0 bg-slate-950/80 z-50 hidden items-center justify-center p-3 sm:p-5 overflow-y-auto no-print">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden my-auto border border-sky-200">
+      <div class="bg-gradient-to-r from-blue-900 via-sky-800 to-blue-950 text-white p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-cyan-300">
+            <i class="fa-solid fa-qrcode text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm">Quét Mã QR Sổ Lý Lịch</h3>
+            <p class="text-[11px] text-sky-200/80">Quét tem nhãn thiết bị để mở Sổ lý lịch PDF 8 trang</p>
+          </div>
+        </div>
+        <button onclick="closeQrScannerModal()" class="p-1.5 text-sky-200 hover:text-white rounded-lg hover:bg-white/10 cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div id="qr-camera-area" class="relative rounded-2xl overflow-hidden bg-slate-950 aspect-[4/3] flex items-center justify-center shadow-inner">
+          <video id="qr-video" class="w-full h-full object-cover" playsinline muted></video>
+          <canvas id="qr-canvas" class="hidden"></canvas>
+          <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div class="w-48 h-48 border-2 border-cyan-400 rounded-2xl relative bg-cyan-500/5">
+              <span class="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-cyan-400 rounded-tl"></span>
+              <span class="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-cyan-400 rounded-tr"></span>
+              <span class="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-cyan-400 rounded-bl"></span>
+              <span class="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-cyan-400 rounded-br"></span>
+              <div class="absolute inset-x-2 h-0.5 bg-cyan-400 animate-pulse top-1/2 -translate-y-1/2 shadow-[0_0_8px_#22d3ee]"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 pt-2 border-t">
+          <label class="px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-upload"></i><span>Tải Ảnh Mã QR</span>
+            <input type="file" id="qr-file-input" accept="image/*" onchange="handleQrFileUpload(event)" class="hidden" />
+          </label>
+          <button onclick="closeQrScannerModal()" class="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs cursor-pointer">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ADD / EDIT EQUIPMENT MODAL -->
   <div id="add-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
     <div class="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto">
@@ -684,6 +932,59 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
       });
     }
 
+    function initDefaultEquipments() {
+      equipments = [
+        {
+          id: "EQ-CNS-01",
+          general: { name: "Máy phát VHF T6T 50W", category: "VHF", model: "T6T MK6", serial: "SN-VHF-001", assetNo: "TSCD-2022-01", bookletNo: "SLL-01/2022", manufacturer: "Park Air Systems", yearMade: "2021", commissioned: "2022-01-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Đài KSKL Tân Sơn Nhất", stationName: "AACC HCM", primaryEngineer: "KS. Nguyễn Văn A" },
+          spec: { power: "50 Watt", channelFreq: "127.500 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.2", interface: "Ethernet / E1 / RS232", coverage: "150 NM", mgmtIp: "192.168.1.101", text: "Máy phát VHF băng không địa đường dài AACC HCM" },
+          components: [{ id: "C1", name: "Khối PA 50W", model: "PA-50W", serial: "PA-991" }],
+          maintenance: [], repair: []
+        },
+        {
+          id: "EQ-CNS-02",
+          general: { name: "Máy thu VHF T6R Dual Channel", category: "VHF", model: "T6R MK6", serial: "SN-VHF-002", assetNo: "TSCD-2022-02", bookletNo: "SLL-02/2022", manufacturer: "Park Air Systems", yearMade: "2021", commissioned: "2022-01-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Trần Văn B" },
+          spec: { power: "N/A", channelFreq: "120.100 MHz", powerSupply: "220V AC / 24V DC", vswr: "1.1", interface: "Ethernet / IP", coverage: "180 NM", mgmtIp: "192.168.1.102", text: "Máy thu VHF đa kênh ATCC HCM" },
+          components: [], maintenance: [], repair: []
+        },
+        {
+          id: "EQ-CNS-03",
+          general: { name: "Hệ thống chuyển mạch thoại VCCS VCS3020X", category: "VCCS", model: "VCS3020X", serial: "SN-VCCS-881", assetNo: "TSCD-2020-88", bookletNo: "SLL-03/2020", manufacturer: "Frequentis", yearMade: "2020", commissioned: "2020-05-10", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "AACC HCM", stationName: "AACC HCM", primaryEngineer: "KS. Lê Văn C" },
+          spec: { power: "1200W", channelFreq: "IP / VoIP ED-137", powerSupply: "Dual 48V DC", mgmtIp: "10.10.1.1", text: "Hệ thống chuyển mạch thoại VCCS AACC HCM" },
+          components: [], maintenance: [], repair: []
+        },
+        {
+          id: "EQ-CNS-04",
+          general: { name: "Hệ thống D-VOR/DME Selex ES", category: "VHF", model: "D-VOR 1150A", serial: "SN-DVOR-09", assetNo: "TSCD-2018-09", bookletNo: "SLL-04/2018", manufacturer: "Selex ES", yearMade: "2018", commissioned: "2018-11-20", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ old", stationName: "BQ old", primaryEngineer: "KS. Phạm Văn D" },
+          spec: { power: "100W Peak", channelFreq: "112.500 MHz", powerSupply: "220V AC / Solar", mgmtIp: "172.16.2.5", text: "Hệ thống dẫn đường D-VOR/DME BQ old" },
+          components: [], maintenance: [], repair: []
+        },
+        {
+          id: "EQ-CNS-05",
+          general: { name: "Hệ thống dẫn đường hạ cánh ILS/DME Normaarc", category: "VHF", model: "Normaarc 7000", serial: "SN-ILS-701", assetNo: "TSCD-2023-77", bookletNo: "SLL-05/2023", manufacturer: "TELERAD", yearMade: "2023", commissioned: "2023-03-01", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trạm BQ New", stationName: "BQ New", primaryEngineer: "KS. Hoang Văn E" },
+          spec: { power: "15W / 100W", channelFreq: "109.900 MHz", powerSupply: "220V AC UPS", mgmtIp: "10.20.1.1", text: "Hệ thống ILS/DME BQ New" },
+          components: [], maintenance: [], repair: []
+        },
+        {
+          id: "EQ-CNS-06",
+          general: { name: "Hệ thống Giám sát Radar Thứ cấp SSR Mode S", category: "VHF", model: "SSR Mode S", serial: "SN-RADAR-202", assetNo: "TSCD-2019-12", bookletNo: "SLL-06/2019", manufacturer: "Indra", yearMade: "2019", commissioned: "2019-08-15", status: "Đang khai thác", priority: "Hệ thống chính (Level 1)" },
+          org: { companyName: "CÔNG TY QUẢN LÝ BAY MIỀN NAM", unit: "TRUNG TÂM BẢO ĐẢM KỸ THUẬT", location: "Trung tâm ATCC HCM", stationName: "ATCC HCM", primaryEngineer: "KS. Vũ Văn F" },
+          spec: { power: "2500W Peak", channelFreq: "1030 / 1090 MHz", powerSupply: "3-Phase 380V", mgmtIp: "10.30.1.5", text: "Radar giám sát Mode S ATCC HCM" },
+          components: [], maintenance: [], repair: []
+        }
+      ];
+      selectedEqId = equipments[0].id;
+      renderUI();
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run.saveAllEquipmentsToSheet(equipments);
+      }
+    }
+
     function renderUI() {
       var filtered = getFilteredEquipments();
       var kpiTotal = document.getElementById('kpi-total');
@@ -706,7 +1007,7 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
         listContainer.innerHTML = '';
 
         if (filtered.length === 0) {
-          listContainer.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">Chưa có thiết bị nào. Nhấp <strong>"Thêm Thiết Bị"</strong> để tạo hồ sơ.</div>';
+          listContainer.innerHTML = '<div class="p-6 text-center text-slate-500 text-xs space-y-3"><p class="font-semibold text-slate-700">Chưa có thiết bị nào trong đài trạm này.</p><p class="text-[11px]">Nhấp nút bên dưới để tạo ngay 6 thiết bị CNS mẫu cho 4 đài trạm:</p><button onclick="initDefaultEquipments()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-xs cursor-pointer inline-flex items-center gap-1.5"><i class="fa-solid fa-cloud-arrow-down"></i><span>Tải 6 Thiết Bị Mẫu VATM</span></button></div>';
         } else {
           filtered.forEach(function(eq) {
             var isSelected = eq.id === selectedEqId;
@@ -1328,6 +1629,7 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
 
     // INITIAL RENDER
     renderUI();
+    checkUrlParametersAndAutoOpenPdf();
 
     // AUTO PULL FROM APPS SCRIPT IF PRESENT
     if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -1336,9 +1638,180 @@ export function generateAppsScriptHtml(equipmentsData?: Equipment[]): string {
           if (Array.isArray(serverData) && serverData.length > 0) {
             equipments = serverData;
             renderUI();
+            checkUrlParametersAndAutoOpenPdf();
           }
         })
         .getEquipmentsFromSheet();
+    }
+
+    // =========================================================================
+    // QR SCANNER & DEEP-LINK AUTO OPEN FUNCTIONALITY FOR WEB APP
+    // =========================================================================
+    var qrVideoStream = null;
+    var qrAnimId = null;
+
+    function openQrScannerModal() {
+      var modal = document.getElementById('qr-scanner-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+      startQrCamera();
+    }
+
+    function closeQrScannerModal() {
+      stopQrCamera();
+      var modal = document.getElementById('qr-scanner-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function stopQrCamera() {
+      if (qrVideoStream) {
+        qrVideoStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e){} });
+        qrVideoStream = null;
+      }
+      if (qrAnimId) {
+        cancelAnimationFrame(qrAnimId);
+        qrAnimId = null;
+      }
+    }
+
+    function startQrCamera() {
+      stopQrCamera();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+        .then(function(stream) {
+          qrVideoStream = stream;
+          var video = document.getElementById('qr-video');
+          if (video) {
+            video.srcObject = stream;
+            video.setAttribute('playsinline', 'true');
+            video.play().then(function() {
+              requestScanFrame();
+            });
+          }
+        }).catch(function(err) {
+          console.warn('Camera access unavailable:', err);
+        });
+    }
+
+    function requestScanFrame() {
+      var video = document.getElementById('qr-video');
+      var canvas = document.getElementById('qr-canvas');
+      if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        qrAnimId = requestAnimationFrame(requestScanFrame);
+        return;
+      }
+      var ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) {
+        qrAnimId = requestAnimationFrame(requestScanFrame);
+        return;
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (typeof jsQR !== 'undefined') {
+        var code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data) {
+          handleScannedQrCode(code.data);
+          return;
+        }
+      }
+      qrAnimId = requestAnimationFrame(requestScanFrame);
+    }
+
+    function handleQrFileUpload(e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(event) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          var ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0);
+          var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          if (typeof jsQR !== 'undefined') {
+            var code = jsQR(imageData.data, imageData.width, imageData.height);
+            if (code && code.data) {
+              handleScannedQrCode(code.data);
+            } else {
+              alert('Không tìm thấy mã QR trong ảnh. Vui lòng chọn ảnh khác có độ tương phản rõ hơn.');
+            }
+          }
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleScannedQrCode(rawCode) {
+      stopQrCamera();
+      closeQrScannerModal();
+      if (!rawCode || !equipments) return;
+
+      var trimmed = rawCode.trim();
+      if (trimmed.includes('?')) {
+        try {
+          var parts = trimmed.split('?')[1];
+          var params = new URLSearchParams(parts);
+          trimmed = params.get('eq') || params.get('equipmentId') || params.get('id') || trimmed;
+        } catch(e){}
+      }
+
+      var matched = equipments.find(function(e) {
+        if (!e) return false;
+        if (e.id && e.id.toLowerCase() === trimmed.toLowerCase()) return true;
+        if (e.general && e.general.serial && e.general.serial.toLowerCase() === trimmed.toLowerCase()) return true;
+        if (e.general && e.general.assetNo && e.general.assetNo.toLowerCase() === trimmed.toLowerCase()) return true;
+        if (e.id && trimmed.toLowerCase().includes(e.id.toLowerCase())) return true;
+        return false;
+      });
+
+      if (matched) {
+        selectedEqId = matched.id;
+        renderUI();
+        openPrintModalCurrent();
+      } else {
+        alert('Đã đọc được mã QR: ' + rawCode + '\nTuy nhiên không tìm thấy thiết bị tương ứng trong danh mục.');
+      }
+    }
+
+    function checkUrlParametersAndAutoOpenPdf() {
+      function processParams(params) {
+        if (!params) return;
+        var targetId = params.eq || params.equipmentId || params.id || (typeof SERVER_QUERY_EQ !== 'undefined' ? SERVER_QUERY_EQ : '');
+        if (targetId && equipments && equipments.length > 0) {
+          handleScannedQrCode(targetId);
+        }
+      }
+
+      if (typeof SERVER_QUERY_EQ !== 'undefined' && SERVER_QUERY_EQ) {
+        processParams({ eq: SERVER_QUERY_EQ });
+        return;
+      }
+
+      if (typeof google !== 'undefined' && google.script && google.script.url) {
+        google.script.url.getLocation(function(location) {
+          if (location && location.parameter) {
+            processParams(location.parameter);
+          }
+        });
+      } else {
+        try {
+          var urlParams = new URLSearchParams(window.location.search);
+          var p = {};
+          urlParams.forEach(function(val, key) { p[key] = val; });
+          processParams(p);
+        } catch(e){}
+      }
     }
   </script>
 </body>

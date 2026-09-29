@@ -435,8 +435,10 @@ export async function syncEquipmentsViaWebhook(
   // Create automatic backup snapshot
   createBackupSnapshot(equipments, 'Tự động sao lưu khi đồng bộ Google Sheets', 'auto_sync');
 
+  const config = loadSyncConfig();
   const payload = {
     action: 'sync_all',
+    spreadsheetId: config.spreadsheetId || '',
     timestamp: new Date().toISOString(),
     equipments
   };
@@ -508,8 +510,9 @@ export async function fetchEquipmentsViaWebhook(webhookUrl: string): Promise<Equ
   }
 
   // Request JSON format explicitly with cache busting
+  const config = loadSyncConfig();
   const separator = cleanUrl.includes('?') ? '&' : '?';
-  const urlWithParams = `${cleanUrl}${separator}format=json&api=1&_t=${Date.now()}`;
+  const urlWithParams = `${cleanUrl}${separator}format=json&api=1&spreadsheetId=${config.spreadsheetId || ''}&_t=${Date.now()}`;
 
   try {
     const res = await fetch(urlWithParams, {

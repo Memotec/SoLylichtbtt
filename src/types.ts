@@ -164,7 +164,7 @@ export interface Equipment {
     usageTime?: string;
     warrantyPeriod?: string;
     status: 'Đang khai thác' | 'Đang bảo dưỡng' | 'Chờ sửa chữa' | 'Dự phòng nóng' | 'Ngừng hoạt động';
-    priority: 'Hệ thống chính (Level 1)' | 'Hệ thống phụ (Level 2)' | 'Dự phòng (Level 3)';
+    priority: 'Thiết bị nhóm 1' | 'Thiết bị nhóm 2' | 'Thiết bị nhóm 3' | 'Thiết bị khác' | string;
   };
   org: {
     companyName: string;

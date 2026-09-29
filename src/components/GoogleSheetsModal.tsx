@@ -94,6 +94,7 @@ export function GoogleSheetsModal({
   const [activeTab, setActiveTab] = useState<'htmlWebApp' | 'webhook' | 'backupHistory' | 'oauth' | 'export'>('htmlWebApp');
   const [htmlSubTab, setHtmlSubTab] = useState<'indexHtml' | 'codeGs'>('indexHtml');
   const [webhookInputUrl, setWebhookInputUrl] = useState(syncConfig.webhookUrl || '');
+  const [inputSheetUrl, setInputSheetUrl] = useState(syncConfig.spreadsheetUrl || syncConfig.spreadsheetId || '');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoadingDrive, setIsLoadingDrive] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -159,6 +160,7 @@ export function GoogleSheetsModal({
     setWebhookInputUrl(syncConfig.webhookUrl || '');
     setSelectedSheetId(syncConfig.spreadsheetId || '');
     setCurrentSheetUrl(syncConfig.spreadsheetUrl || '');
+    setInputSheetUrl(syncConfig.spreadsheetUrl || syncConfig.spreadsheetId || '');
   }, [syncConfig]);
 
   // Load existing spreadsheets when signed in via OAuth
@@ -201,17 +203,30 @@ export function GoogleSheetsModal({
   // Handle saving Webhook URL configuration
   const handleSaveWebhookConfig = (newUrl?: string) => {
     const urlToSave = (newUrl !== undefined ? newUrl : webhookInputUrl).trim();
+    
+    const extractSpreadsheetId = (val: string): string => {
+      const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      return match ? match[1] : val.trim();
+    };
+
+    const extractedId = extractSpreadsheetId(inputSheetUrl);
+    const formattedUrl = inputSheetUrl.includes('docs.google.com') 
+      ? inputSheetUrl.trim() 
+      : inputSheetUrl.trim() ? `https://docs.google.com/spreadsheets/d/${extractedId}` : '';
+
     const updated: GoogleSheetsSyncConfig = {
       ...syncConfig,
       mode: 'webhook',
       webhookUrl: urlToSave,
+      spreadsheetId: extractedId,
+      spreadsheetUrl: formattedUrl,
       autoSyncEnabled: true
     };
     onUpdateSyncConfig(updated);
     saveSyncConfig(updated);
     setStatusMessage({
       text: urlToSave 
-        ? 'Đã lưu cấu hình! Chế độ Tự động đồng bộ không cần đăng nhập đang HOẠT ĐỘNG.' 
+        ? `Đã lưu cấu hình đồng bộ! Liên kết bảng tính: ${extractedId ? extractedId.slice(0, 12) + '...' : 'Mặc định (Tự tạo mới)'}` 
         : 'Đã xóa đường dẫn Webhook.',
       type: 'success'
     });
@@ -679,36 +694,49 @@ export function GoogleSheetsModal({
                 </div>
               </div>
 
-              {/* 3-Step Publishing Guide */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
+              {/* 3-Step Publishing Guide & Troubleshooting Box */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
                 <h5 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-blue-600" />
-                  Hướng dẫn xuất bản trang web trên Google Apps Script trong 1 phút:
+                  Hướng dẫn triển khai Web App chuẩn 100% không bao giờ bị lỗi:
                 </h5>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5 shadow-2xs">
                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">1</span>
-                    <h6 className="font-bold text-slate-800">Tạo File Code.gs</h6>
+                    <h6 className="font-bold text-slate-800">Dán mã Code.gs</h6>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Trên Google Sheets, chọn <strong>Tiện ích mở rộng &gt; Apps Script</strong>. Dán toàn bộ mã ở tab <strong>Code.gs</strong> vào.
+                      Trong Google Apps Script, mở tệp <code className="font-mono font-bold text-blue-700 bg-blue-50 px-1">Code.gs</code>. Xóa hết mã mặc định, dán mã ở tab <strong>Code.gs</strong> ở trên.
                     </p>
                   </div>
 
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5 shadow-2xs">
                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">2</span>
-                    <h6 className="font-bold text-slate-800">Tạo File Index.html</h6>
+                    <h6 className="font-bold text-slate-800">Tạo tệp Index (HTML)</h6>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Bấm dấu <strong>+ (Thêm tệp) &gt; HTML</strong>, đặt tên là <code className="font-mono font-bold text-blue-700 bg-blue-50 px-1">Index</code>. Dán toàn bộ mã <strong>Index.html</strong> vào.
+                      Nhấn dấu <strong>+ (Thêm tệp) &gt; HTML</strong>. Đặt tên chính xác là <code className="font-mono font-bold text-blue-700 bg-blue-50 px-1">Index</code> (Không gõ thêm đuôi .html). Dán mã tab <strong>Index.html</strong> vào.
                     </p>
                   </div>
 
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5 shadow-2xs">
                     <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">3</span>
-                    <h6 className="font-bold text-slate-800">Triển khai Web App</h6>
+                    <h6 className="font-bold text-slate-800">Cài đặt Triển Khai</h6>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Nhấn <strong>Triển khai (Deploy) &gt; Triển khai mới</strong>. Chọn loại <strong>Ứng dụng web</strong>, quyền truy cập <strong>Bất kỳ ai (Anyone)</strong> và nhấn <strong>Triển khai</strong>!
+                      Nhấn <strong>Triển khai (Deploy) &gt; Quản lý bản triển khai</strong> &gt; Biểu tượng ✏️ <strong>Sửa</strong> &gt; Chọn <strong>Phiên bản mới (New version)</strong> &gt; Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong> &gt; Bấm <strong>Triển khai</strong>.
                     </p>
                   </div>
+                </div>
+
+                {/* Important Checklist Callout */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Lưu ý quan trọng nếu Web App báo lỗi:</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-800 pl-1">
+                    <li>Nếu báo lỗi <i>"Chưa tìm thấy tệp Index"</i>: Đảm bảo bạn đã bấm dấu <strong>+ &gt; HTML</strong> và đặt tên là <strong>Index</strong> (chữ I viết hoa).</li>
+                    <li>Nếu báo lỗi <i>"Không có quyền truy cập" / 401 / 403</i>: Trong màn hình Deploy, mục <i>"Ai có quyền truy cập" (Who has access)</i> bắt buộc chọn <strong>Bất kỳ ai (Anyone)</strong>.</li>
+                    <li>Mọi lần sửa mã nguồn trong Apps Script, bạn **bắt buộc** phải chọn <strong>Phiên bản mới (New Version)</strong> khi Deploy thì đường link cũ mới cập nhật mã mới!</li>
+                  </ul>
                 </div>
               </div>
 
@@ -744,37 +772,60 @@ export function GoogleSheetsModal({
 
               {/* URL Input Box */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Link2 className="w-4 h-4 text-emerald-600" />
-                      Đường Dẫn Webhook Google Apps Script (Web App URL):
-                    </span>
-                    <button
-                      onClick={() => setActiveTab('htmlWebApp')}
-                      className="text-blue-600 hover:text-blue-800 underline text-xs font-medium cursor-pointer"
-                    >
-                      Chưa có? Nhấn để lấy mã Apps Script
-                    </button>
-                  </label>
-                  <div className="flex gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Link2 className="w-4 h-4 text-emerald-600" />
+                        Đường Dẫn Webhook Google Apps Script:
+                      </span>
+                      <button
+                        onClick={() => setActiveTab('htmlWebApp')}
+                        className="text-blue-600 hover:text-blue-800 underline text-[11px] font-medium cursor-pointer"
+                      >
+                        Lấy mã Apps Script
+                      </button>
+                    </label>
                     <input
                       type="url"
-                      placeholder="https://script.google.com/macros/s/AKfycb.../exec hoặc link Google Sheet"
+                      placeholder="https://script.google.com/macros/s/.../exec"
                       value={webhookInputUrl}
                       onChange={(e) => setWebhookInputUrl(e.target.value)}
-                      className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                     />
-                    <button
-                      onClick={() => handleSaveWebhookConfig()}
-                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
-                    >
-                      Lưu cấu hình
-                    </button>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Kết thúc bằng <code className="font-mono bg-slate-100 px-1 rounded text-[9px]">/exec</code> lấy từ phần mềm Apps Script.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
-                    Ví dụ: <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">https://script.google.com/macros/s/.../exec</code>
-                  </p>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        Đường dẫn Google Sheet (Spreadsheet ID / URL):
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://docs.google.com/spreadsheets/d/.../edit hoặc dán mã ID tệp"
+                      value={inputSheetUrl}
+                      onChange={(e) => setInputSheetUrl(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Dán URL Google Sheet của bạn vào đây. Hệ thống sẽ tự động giải mã mã bảng tính ID.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => handleSaveWebhookConfig()}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Lưu Cấu Hình Kết Nối</span>
+                  </button>
                 </div>
 
                 {/* Switch Auto-Sync */}

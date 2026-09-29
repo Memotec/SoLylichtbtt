@@ -203,15 +203,16 @@ export function PrintProfileModal({
             <p><strong>Mã TS:</strong> .................... <span style="font-weight:bold;">${formData.general.assetNo || '....................'}</span> ....................</p>
           </div>
 
-          <div style="height: 60pt;"></div>
+          <div style="height: 40pt;"></div>
 
-          <div style="border:1px solid #000000; width:180pt; margin:0 auto; padding:8pt; text-align:center; font-size:12pt;">
+          <div style="border:2px solid #000000; width:180pt; margin:0 auto; padding:8pt; text-align:center; font-size:12pt; font-weight:bold;">
             Số: <strong>${formData.general.bookletNo || '................'}</strong>
           </div>
           ${qrDataUrl ? `
-          <div style="text-align:center; margin-top:10pt;">
-            <img src="${qrDataUrl}" width="75" height="75" style="border:1px solid #000000;" />
-            <p style="font-size:8pt; font-style:italic; margin-top:2pt;">Quét mã QR để mở Sổ lý lịch điện tử (PDF)</p>
+          <div style="text-align:center; margin-top:15pt;">
+            <img src="${qrDataUrl}" width="140" height="140" style="border:2.5px solid #000000; padding:4px; display:inline-block; background-color:#ffffff;" />
+            <p style="font-size:10pt; font-weight:bold; margin-top:5pt; letter-spacing:0.5px;">MÃ QR TRUY XUẤT LÝ LỊCH ĐIỆN TỬ</p>
+            <p style="font-size:8.5pt; font-style:italic; color:#333333; margin-top:3pt; max-width:280pt; margin-left:auto; margin-right:auto; line-height:1.4;">Quét mã QR bằng Camera di động để truy cập tức thì Sổ lý lịch điện tử, cập nhật thông số đo kiểm định kỳ và nhật ký xử lý sự cố đài trạm.</p>
           </div>
           ` : ''}
         </div>
